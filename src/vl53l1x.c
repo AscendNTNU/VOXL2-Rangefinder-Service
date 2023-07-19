@@ -1,0 +1,311 @@
+/*******************************************************************************
+ * Copyright 2023 ModalAI Inc.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * 4. The Software is used solely in conjunction with devices provided by
+ *    ModalAI Inc.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR busINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ ******************************************************************************/
+
+
+#include <stdio.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <voxl_io/i2c.h>
+#include "vl53l1x_registers.h"
+#include "vl53l1x.h"
+#include "config_file.h" // for bus global variable
+
+
+static int en_debug = 0;
+
+void vl53l1x_set_en_debug(int en){
+	en_debug = en;
+	return;
+}
+
+
+// reverse lsb and msb bytes of a 16-bit register for DSPAL
+static uint32_t _reverse_lsb_msb_16(uint16_t reg)
+{
+	uint32_t out = reg >> 8;
+	out |= (reg & 0xff) << 8;
+	return out;
+}
+
+
+
+static int vl53l1x_write_reg_byte(uint16_t reg, uint8_t data)
+{
+	return voxl_i2c_write_bytes(bus, _reverse_lsb_msb_16(reg), 1, &data);
+}
+
+static int vl53l1x_write_reg_word(uint16_t reg, uint16_t data)
+{
+	uint8_t buf[2];
+	buf[0] = data >> 8;
+	buf[1] = data & 0x00FF;
+	return voxl_i2c_write_bytes(bus, _reverse_lsb_msb_16(reg), 2, buf);
+}
+
+static int vl53l1x_write_reg_int(uint16_t reg, uint32_t data)
+{
+	uint8_t buf[4];
+	buf[0] = (data >> 24) & 0xFF;
+	buf[1] = (data >> 16) & 0xFF;
+	buf[2] = (data >> 8)  & 0xFF;
+	buf[3] = (data >> 0)  & 0xFF;
+	return voxl_i2c_write_bytes(bus, _reverse_lsb_msb_16(reg), 4, buf);
+}
+
+static int vl53l1x_read_reg_byte(uint16_t reg, uint8_t* data)
+{
+	int ret;
+	ret = voxl_i2c_read_bytes(bus, _reverse_lsb_msb_16(reg), 1, data);
+	return ret;
+}
+
+
+static int vl53l1x_read_reg_word(uint16_t reg, uint16_t* data)
+{
+	int ret;
+	uint8_t buf[2];
+	ret = voxl_i2c_read_bytes(bus, _reverse_lsb_msb_16(reg), 2, buf);
+	if(ret) return -1;
+	*data = (buf[0] << 8) + buf[1];
+	return 0;
+}
+
+
+int vl53l1x_start_ranging(void)
+{
+	return vl53l1x_write_reg_byte(SYSTEM__MODE_START, 0x40); /* Enable VL53L1X */
+}
+
+int vl53l1x_stop_ranging(void)
+{
+	return vl53l1x_write_reg_byte(SYSTEM__MODE_START, 0x00); /* Disable VL53L1X */
+}
+
+int vl53l1x_clear_interrupt(void)
+{
+	return vl53l1x_write_reg_byte(SYSTEM__INTERRUPT_CLEAR, 0x01);
+}
+
+int vl53l1x_check_for_data_ready(uint8_t *isDataReady)
+{
+	uint8_t Temp;
+
+	if(vl53l1x_read_reg_byte(GPIO__TIO_HV_STATUS, &Temp)){
+		return -1;
+	}
+
+	if(Temp & 1){
+		*isDataReady = 1;
+	}
+	else{
+		*isDataReady = 0;
+	}
+	return 0;
+}
+
+int vl53l1x_get_distance_mm(int* dist_mm)
+{
+	// first check status, if it's not valid, don't bother reading the distance
+	uint8_t status;
+	if(vl53l1x_read_reg_byte(VL53L1_RESULT__RANGE_STATUS, &status)){
+		return -1;
+	}
+	status = status & 0x1F;
+	if(status!=9){
+		*dist_mm = -1000;
+		return 0;
+	}
+
+	uint16_t tmp;
+	if(vl53l1x_read_reg_word(VL53L1_RESULT__FINAL_CROSSTALK_CORRECTED_RANGE_MM_SD0, &tmp)){
+		return -1;
+	}
+	*dist_mm = tmp;
+	return 0;
+}
+
+int vl53l1x_set_address(uint8_t addr)
+{
+	return vl53l1x_write_reg_byte(VL53L1_I2C_SLAVE__DEVICE_ADDRESS, addr); /* Enable VL53L1X */
+}
+
+int vl53l1x_check_whoami(int quiet)
+{
+	//read WHOAMI register
+	uint16_t id;
+	int ret = vl53l1x_read_reg_word(VL53L1_IDENTIFICATION__MODEL_ID, &id);
+	if(ret<0){
+		if(!quiet){
+			fprintf(stderr, "ERROR in %s, failed to read whoami register\n", __FUNCTION__);
+		}
+		return -2;
+	}
+	if(id != 0xEACC){
+		fprintf(stderr, "ERROR in %s, invalid whoami register\n", __FUNCTION__);
+		fprintf(stderr, "read %X, expected 0xEACC\n", id);
+		return -1;
+	}
+	return 0;
+}
+
+
+
+// argument is the index of this sensor in the enabled_sensors array
+int vl53l1x_init(float fov_deg)
+{
+	if(vl53l1x_check_whoami(0)){
+		fprintf(stderr, "ERROR in %s, failed to verify whoami\n", __FUNCTION__);
+		return -1;
+	}
+
+	// load in default settings
+	uint8_t Addr = 0x00;
+	for (Addr = 0x2D; Addr <= 0x87; Addr++){
+		vl53l1x_write_reg_byte(Addr, VL51L1X_DEFAULT_CONFIGURATION[Addr - 0x2D]);
+	}
+
+	// set to long distance mode
+	vl53l1x_write_reg_byte(PHASECAL_CONFIG__TIMEOUT_MACROP, 0x0A);
+	vl53l1x_write_reg_byte(RANGE_CONFIG__VCSEL_PERIOD_A, 0x0F);
+	vl53l1x_write_reg_byte(RANGE_CONFIG__VCSEL_PERIOD_B, 0x0D);
+	vl53l1x_write_reg_byte(RANGE_CONFIG__VALID_PHASE_HIGH, 0xB8);
+	vl53l1x_write_reg_word(SD_CONFIG__WOI_SD0, 0x0F0D);
+	vl53l1x_write_reg_word(SD_CONFIG__INITIAL_PHASE_SD0, 0x0E0E);
+
+	// set timing budget to 50ms
+	int TimingBudgetInMs = 50;
+	switch (TimingBudgetInMs)
+	{
+		case 20:
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_A_HI,0x001E);
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_B_HI,0x0022);
+			break;
+		case 33:
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_A_HI,0x0060);
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_B_HI,0x006E);
+			break;
+		case 50:
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_A_HI,0x00AD);
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_B_HI,0x00C6);
+			break;
+		case 100:
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_A_HI,0x01CC);
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_B_HI,0x01EA);
+			break;
+		case 200:
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_A_HI,0x02D9);
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_B_HI,0x02F8);
+			break;
+		case 500:
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_A_HI,0x048F);
+			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_B_HI,0x04A4);
+			break;
+		default:
+			fprintf(stderr, "invalid timing budget\n");
+			return -1;
+	}
+
+	// set optical center to the middle
+	vl53l1x_write_reg_byte(ROI_CONFIG__USER_ROI_CENTRE_SPAD, 199);
+
+	// pick correct SPAD size between 4x4 to 16x16 for desired fov
+	// also set the FOV that will actually be set in the enabled_sensors struct
+	// so that this number will be sent out the pipe instead of what was
+	// in the config file
+	uint8_t pads = 4;
+	if(fov_deg >= 26.125f){
+		fov_deg = 27.0f;
+		pads = 16;
+	}
+	else if(fov_deg >= 24.375f){
+		fov_deg = 25.25f;
+		pads = 14;
+	}
+	else if(fov_deg >= 22.625f){
+		fov_deg = 23.5f;
+		pads = 12;
+	}
+	else if(fov_deg >= 20.875f){
+		fov_deg = 21.75f;
+		pads = 10;
+	}
+	else if(fov_deg >= 18.75f){
+		fov_deg = 20.0f;
+		pads = 8;
+	}
+	else if(fov_deg >= 16.25f){
+		fov_deg = 17.5f;
+		pads = 6;
+	}
+	else{
+		fov_deg = 15.0f;
+		pads = 4;
+	}
+
+	if(en_debug){
+		printf("using %2d pads, for a diagonal fov of %6.1f deg\n", pads, (double)fov_deg);
+	}
+
+	vl53l1x_write_reg_byte(ROI_CONFIG__USER_ROI_REQUESTED_GLOBAL_XY_SIZE,  (pads-1)<<4 | (pads-1));
+
+
+	// stuff for automatic intermeasurement period, not used here
+	// uint16_t ClockPLL;
+	// uint16_t intermeasurement_time_ms = 30;
+	// vl53l1x_read_reg_word(VL53L1_RESULT__OSC_CALIBRATE_VAL, &ClockPLL);
+	// ClockPLL = ClockPLL & 0x3FF;
+	// vl53l1x_write_reg_int(VL53L1_SYSTEM__INTERMEASUREMENT_PERIOD,
+	// 			   (uint32_t)(ClockPLL * intermeasurement_time_ms * 1.075));
+
+	return 0;
+}
+
+
+int vl53l1x_wait_for_data(void)
+{
+	for(int i=0; i<100; i++){
+		uint8_t isDataReady = 0;
+		if(vl53l1x_check_for_data_ready(&isDataReady)){
+			fprintf(stderr, "failed to check data ready\n");
+			return -1;
+		}
+		if(isDataReady){
+			return 0;
+		}
+		//printf("data ready: %d i=%d\n", isDataReady, i);
+		usleep(1000);
+	}
+
+	// timeout
+	return -1;
+}

@@ -1,0 +1,18 @@
+#
+# Copyright (c) 2021 ModalAI, Inc.
+#
+
+[Unit]
+Description=voxl-rangefinder-server
+SourcePath=/usr/bin/voxl-rangefinder-server
+
+[Service]
+User=root
+Type=simple
+PIDFile=/run/voxl-rangefinder-server.pid
+ExecStartPre=/bin/sleep 2
+ExecStart=/usr/bin/voxl-rangefinder-server
+
+[Install]
+WantedBy=multi-user.target
+
