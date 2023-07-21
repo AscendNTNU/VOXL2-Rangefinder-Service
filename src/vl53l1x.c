@@ -61,7 +61,7 @@ static uint32_t _reverse_lsb_msb_16(uint16_t reg)
 
 static int vl53l1x_write_reg_byte(uint16_t reg, uint8_t data)
 {
-	return voxl_i2c_write_bytes(bus, _reverse_lsb_msb_16(reg), 1, &data);
+	return voxl_i2c_reg16_write_bytes(bus, _reverse_lsb_msb_16(reg), 1, &data);
 }
 
 static int vl53l1x_write_reg_word(uint16_t reg, uint16_t data)
@@ -69,7 +69,7 @@ static int vl53l1x_write_reg_word(uint16_t reg, uint16_t data)
 	uint8_t buf[2];
 	buf[0] = data >> 8;
 	buf[1] = data & 0x00FF;
-	return voxl_i2c_write_bytes(bus, _reverse_lsb_msb_16(reg), 2, buf);
+	return voxl_i2c_reg16_write_bytes(bus, _reverse_lsb_msb_16(reg), 2, buf);
 }
 
 static int vl53l1x_write_reg_int(uint16_t reg, uint32_t data)
@@ -79,14 +79,15 @@ static int vl53l1x_write_reg_int(uint16_t reg, uint32_t data)
 	buf[1] = (data >> 16) & 0xFF;
 	buf[2] = (data >> 8)  & 0xFF;
 	buf[3] = (data >> 0)  & 0xFF;
-	return voxl_i2c_write_bytes(bus, _reverse_lsb_msb_16(reg), 4, buf);
+	return voxl_i2c_reg16_write_bytes(bus, _reverse_lsb_msb_16(reg), 4, buf);
 }
 
 static int vl53l1x_read_reg_byte(uint16_t reg, uint8_t* data)
 {
 	int ret;
-	ret = voxl_i2c_read_bytes(bus, _reverse_lsb_msb_16(reg), 1, data);
-	return ret;
+	ret = voxl_i2c_reg16_read_bytes(bus, _reverse_lsb_msb_16(reg), 1, data);
+	if(ret!=1) return -1;
+	return 0;
 }
 
 
@@ -94,8 +95,8 @@ static int vl53l1x_read_reg_word(uint16_t reg, uint16_t* data)
 {
 	int ret;
 	uint8_t buf[2];
-	ret = voxl_i2c_read_bytes(bus, _reverse_lsb_msb_16(reg), 2, buf);
-	if(ret) return -1;
+	ret = voxl_i2c_reg16_read_bytes(bus, _reverse_lsb_msb_16(reg), 2, buf);
+	if(ret!=2) return -1;
 	*data = (buf[0] << 8) + buf[1];
 	return 0;
 }
@@ -138,16 +139,19 @@ int vl53l1x_get_distance_mm(int* dist_mm)
 	// first check status, if it's not valid, don't bother reading the distance
 	uint8_t status;
 	if(vl53l1x_read_reg_byte(VL53L1_RESULT__RANGE_STATUS, &status)){
+		*dist_mm = -2;
 		return -1;
 	}
 	status = status & 0x1F;
-	if(status!=9){
-		*dist_mm = -1000;
-		return 0;
-	}
+	if(en_debug) printf("status: %d\n", status);
+	// if(status!=9){
+	// 	*dist_mm = -1;
+	// 	return 0;
+	// }
 
 	uint16_t tmp;
 	if(vl53l1x_read_reg_word(VL53L1_RESULT__FINAL_CROSSTALK_CORRECTED_RANGE_MM_SD0, &tmp)){
+		*dist_mm = -2;
 		return -1;
 	}
 	*dist_mm = tmp;
@@ -172,7 +176,7 @@ int vl53l1x_check_whoami(int quiet)
 	}
 	if(id != 0xEACC){
 		fprintf(stderr, "ERROR in %s, invalid whoami register\n", __FUNCTION__);
-		fprintf(stderr, "read %X, expected 0xEACC\n", id);
+		fprintf(stderr, "read 0x%X, expected 0xEACC\n", id);
 		return -1;
 	}
 	return 0;
@@ -203,7 +207,8 @@ int vl53l1x_init(float fov_deg)
 	vl53l1x_write_reg_word(SD_CONFIG__INITIAL_PHASE_SD0, 0x0E0E);
 
 	// set timing budget to 50ms
-	int TimingBudgetInMs = 50;
+	//int TimingBudgetInMs = 50;
+
 	switch (TimingBudgetInMs)
 	{
 		case 20:

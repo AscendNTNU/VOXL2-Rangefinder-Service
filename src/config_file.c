@@ -106,7 +106,12 @@ void print_config(void)
 	int i,j;
 	const char* type_strings[] = RANGEFINDER_TYPE_STRINGS;
 
+	printf("=================================================\n");
 	printf("i2c_bus: %d\n", bus);
+	printf("has_nonmux_sensor: %d\n", has_nonmux_sensor);
+	printf("n_mux_sensors:     %d\n", n_mux_sensors);
+	printf("n_enabled_sensors: %d\n", n_enabled_sensors);
+
 
 	for(i=0; i<n_total_sensors; i++){
 		printf("#%d:\n",i);
@@ -132,6 +137,8 @@ void print_config(void)
 
 		printf("\n");
 	}
+
+	printf("=================================================\n");
 	return;
 }
 

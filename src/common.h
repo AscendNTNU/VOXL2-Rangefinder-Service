@@ -37,10 +37,13 @@
 #define MAX_SENSORS	32
 
 #define TCA9548A_MUX_DEFAULT_ADDR	0x70
-#define VL53L1X_TOF_DEFAULT_ADDR	0x29
+
 
 // OLD COMMENT FROM APQ8096
 // datasheet says 0x52, but when we have to >>1, so just use 29 and avoid the nonsense
+#define VL53L1X_TOF_DEFAULT_ADDR	0x29
+
+#define TimingBudgetInMs 100
 
 #define MUX_ALL		8
 #define MUX_NONE	-1

@@ -38,6 +38,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <voxl_io/i2c.h>
 #include <modal_start_stop.h>
@@ -143,6 +144,9 @@ static int _set_multiplexer(int mux_ch, uint8_t addr)
 	// // first set slave address to the multiplexer
 	// const int i2c_bit_rate_hz	= 400000;
 	// const int i2c_timeout_us	= 1000;
+	//
+
+	if(en_debug) printf("setting mux to %d\n", mux_ch);
 
 	if(voxl_i2c_set_device_address(bus, mux_address)){
 		fprintf(stderr, "failed to set i2c slave config on bus %d, address %d\n",
@@ -208,7 +212,7 @@ int main(int argc, char* argv[])
 
 	// read in config file
 	if(read_config_file()) return -1;
-	if(en_debug) print_config();
+	print_config();
 
 
 	// make sure another instance isn't running
@@ -224,7 +228,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	printf("initializing i2c bus\n");
+	printf("initializing i2c bus %d\n", bus);
 	// don't worry, we will be changing this address later
 	if(voxl_i2c_init(bus, VL53L1X_TOF_DEFAULT_ADDR)){
 		fprintf(stderr, "failed to init bus\n");
@@ -257,6 +261,8 @@ int main(int argc, char* argv[])
 
 		if(vl53l1x_init(i)) _quit(-1);
 	}
+
+	if(en_debug) printf("finished initializing %d vl53l1x sensors\n", n_enabled_sensors);
 
 
 	// create the pipe
@@ -309,8 +315,11 @@ int main(int argc, char* argv[])
 		}
 
 		// start the standalone sensor ranging if it exists
+		// TODO this should be the secodnary address later
 		if(has_nonmux_sensor){
-			_set_multiplexer(MUX_NONE, VL53L1X_TOF_DEFAULT_ADDR);
+			if(n_mux_sensors>0){
+				_set_multiplexer(MUX_NONE, VL53L1X_TOF_DEFAULT_ADDR);
+			}
 			if(vl53l1x_start_ranging()){
 				fprintf(stderr, "failed to start ranging\n");
 				main_running = 0;
@@ -329,9 +338,9 @@ int main(int argc, char* argv[])
 
 		// sleep a bit while they range, this should be less than the actual
 		// ranging time so we can poll them at the end of the ranging process
-		usleep(33000);
-
+		usleep(TimingBudgetInMs*1000);
 		// now start reading the data back in
+		memset(dist_mm, 0, sizeof(dist_mm));
 		for(i=0;i<n_enabled_sensors;i++){
 
 			// switch i2c bus and multiplexer over to either a multiplexed or non-multiplexed sensor
@@ -339,7 +348,7 @@ int main(int argc, char* argv[])
 				_set_multiplexer(	enabled_sensors[i].i2c_mux_port,\
 							enabled_sensors[i].i2c_mux_address);
 			}
-			else{
+			else if(n_mux_sensors>0) {
 				_set_multiplexer(MUX_NONE, VL53L1X_TOF_DEFAULT_ADDR);
 			}
 
