@@ -136,25 +136,100 @@ int vl53l1x_check_for_data_ready(uint8_t *isDataReady)
 
 int vl53l1x_get_distance_mm(int* dist_mm)
 {
-	// first check status, if it's not valid, don't bother reading the distance
-	uint8_t status;
-	if(vl53l1x_read_reg_byte(VL53L1_RESULT__RANGE_STATUS, &status)){
+	// first check raw status register
+	uint8_t status_raw;
+	if(vl53l1x_read_reg_byte(VL53L1_RESULT__RANGE_STATUS, &status_raw)){
 		*dist_mm = -2;
 		return -1;
 	}
-	status = status & 0x1F;
-	if(en_debug) printf("status: %d\n", status);
-	// if(status!=9){
-	// 	*dist_mm = -1;
-	// 	return 0;
-	// }
+	status_raw = status_raw & 0x1F;
 
+	// convert from raw register to a real status code.
+	uint8_t status = 255;
+	static const uint8_t status_rtn[24] = {\
+				255, 255, 255, 5, 2, 4, 1, 7, 3, 0,
+				255, 255, 9, 13, 255, 255, 255, 255, 10, 6,
+				255, 255, 11, 12 };
+	if(status_raw < 24) status = status_rtn[status_raw];
+
+	// debug print the result
+	if(en_debug){
+		printf("status: %d  ", status);
+		switch(status){
+			case 0:
+				printf("Valid Range\n");
+				break;
+			case 1:
+				printf("Sigma Fail\n");
+				break;
+			case 2:
+				printf("Signal Fail\n");
+				break;
+			case 3:
+				printf("Min Range\n");
+				break;
+			case 4:
+				printf("Phase OOB\n");
+				break;
+			case 5:
+				printf("Hardware Failure\n");
+				break;
+			case 7:
+				printf("Wrapped Target\n");
+				break;
+			case 8:
+				printf("Processing Failure\n");
+				break;
+			case 14:
+				printf("Range Invalid\n");
+				break;
+
+			default: /**/
+				printf("Other Error\n");
+		}
+	}
+
+	// if not okay or low signal (which is fine) then flag as bad reading
+	if(status!=0 && status!=2){
+		*dist_mm = -1;
+		return 0;
+	}
+
+	// read actual range
 	uint16_t tmp;
 	if(vl53l1x_read_reg_word(VL53L1_RESULT__FINAL_CROSSTALK_CORRECTED_RANGE_MM_SD0, &tmp)){
 		*dist_mm = -2;
 		return -1;
 	}
 	*dist_mm = tmp;
+
+	// experiment applying gain factor (made it worse)
+	// int32_t range_mm = tmp;
+	// range_mm *= 2011;
+	// range_mm += 0x0400;
+	// range_mm /= 0x0800;
+	// *dist_mm = range_mm;
+
+	// read signal strength
+	vl53l1x_read_reg_word(VL53L1_RESULT__PEAK_SIGNAL_COUNT_RATE_MCPS_SD0, &tmp);
+	if(en_debug) printf("signal: %d", tmp);
+
+
+	vl53l1x_read_reg_word(VL53L1_RESULT__SIGMA_SD0, &tmp);
+	uint32_t sd_mm = tmp<<5;
+	//uint32_t sd_mm = tmp;
+	if(en_debug) printf("   SD: %d\n", sd_mm);
+
+
+#define VL53L1_FIXPOINT97TOFIXPOINT1616(Value) \
+	(uint16_t)((uint32_t)Value<<9)
+
+	uint16_t TempFix1616 = VL53L1_FIXPOINT97TOFIXPOINT1616(sd_mm);
+
+
+printf("   SD: %d\n", TempFix1616);
+
+
 	return 0;
 }
 
