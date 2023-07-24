@@ -55,6 +55,7 @@
 
 
 static int en_debug = 0;
+static int en_timing = 0;
 static int en_config_mode = 0;
 static int config_arrangement = 0;
 
@@ -75,6 +76,7 @@ arrangement and should only be used by the voxl-configure-rangefinders script.\n
 -c, --config {config #}     set config file to default configuration\n\
 -d, --debug                 print debug info\n\
 -h, --help                  print this help message\n\
+-t, --timing                print timing info\n\
 \n");
 	return;
 }
@@ -87,12 +89,13 @@ static int __parse_opts(int argc, char* argv[])
 		{"config",				required_argument,	0,	'c'},
 		{"debug",				no_argument,		0,	'd'},
 		{"help",				no_argument,		0,	'h'},
+		{"timing",				no_argument,		0,	't'},
 		{0, 0, 0, 0}
 	};
 
 	while(1){
 		int option_index = 0;
-		int c = getopt_long(argc, argv, "c:dh", long_options, &option_index);
+		int c = getopt_long(argc, argv, "c:dht", long_options, &option_index);
 
 		if(c == -1) break; // Detect the end of the options.
 
@@ -116,6 +119,10 @@ static int __parse_opts(int argc, char* argv[])
 		case 'h':
 			print_usage();
 			return -1;
+
+		case 't':
+			en_timing = 1;
+			break;
 
 		default:
 			print_usage();
@@ -384,14 +391,9 @@ int main(int argc, char* argv[])
 		pipe_server_write(PIPE_CH, data, sizeof(rangefinder_data_t)*n_enabled_sensors);
 
 		// print distances in debug mode
-		if(en_debug){
+		if(en_timing){
 			double dt_ms = (time_ns-last_time_ns)/1000000.0;
 			printf("dt = %6.1fms ", dt_ms);
-
-			printf("dist_mm: ");
-			for(i=0;i<n_enabled_sensors;i++){
-				printf(" %6d", dist_mm[i]);
-			}
 			printf("\n");
 		}
 

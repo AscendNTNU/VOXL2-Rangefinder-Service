@@ -82,6 +82,15 @@ static int vl53l1x_write_reg_int(uint16_t reg, uint32_t data)
 	return voxl_i2c_reg16_write_bytes(bus, _reverse_lsb_msb_16(reg), 4, buf);
 }
 
+
+static int vl53l1x_read_reg_bytes(uint16_t reg, uint8_t* data, int bytes)
+{
+	int ret;
+	ret = voxl_i2c_reg16_read_bytes(bus, _reverse_lsb_msb_16(reg), bytes, data);
+	if(ret!=bytes) return -1;
+	return 0;
+}
+
 static int vl53l1x_read_reg_byte(uint16_t reg, uint8_t* data)
 {
 	int ret;
@@ -134,16 +143,59 @@ int vl53l1x_check_for_data_ready(uint8_t *isDataReady)
 	return 0;
 }
 
+
+static void _print_status(uint8_t status)
+{
+	printf("status: %d  ", status);
+	switch(status){
+		case 0:
+			printf("Valid Range\n");
+			break;
+		case 1:
+			printf("Sigma Fail\n");
+			break;
+		case 2:
+			printf("Low Signal\n");
+			break;
+		case 3:
+			printf("Min Range\n");
+			break;
+		case 4:
+			printf("Phase OOB\n");
+			break;
+		case 5:
+			printf("Hardware Failure\n");
+			break;
+		case 7:
+			printf("Wrapped Target\n");
+			break;
+		case 8:
+			printf("Processing Failure\n");
+			break;
+		case 14:
+			printf("Range Invalid\n");
+			break;
+		default:
+			printf("Other Error\n");
+	}
+	return;
+}
+
+
 int vl53l1x_get_distance_mm(int* dist_mm)
 {
-	// first check raw status register
-	uint8_t status_raw;
-	if(vl53l1x_read_reg_byte(VL53L1_RESULT__RANGE_STATUS, &status_raw)){
+	// one-shot read of all data
+	static const uint16_t base = VL53L1_RESULT__INTERRUPT_STATUS;
+	static const uint8_t n_bytes = 16; // up to the corrected range_mm register
+	uint8_t all_data[n_bytes];
+	if(vl53l1x_read_reg_bytes(VL53L1_RESULT__INTERRUPT_STATUS, all_data, n_bytes)){
 		*dist_mm = -2;
+		fprintf(stderr, "ERROR bulk reading status\n");
 		return -1;
 	}
-	status_raw = status_raw & 0x1F;
 
+	// first check raw status register
+	uint8_t status_raw = all_data[VL53L1_RESULT__RANGE_STATUS-base] & 0x1F;
 	// convert from raw register to a real status code.
 	uint8_t status = 255;
 	static const uint8_t status_rtn[24] = {\
@@ -152,56 +204,16 @@ int vl53l1x_get_distance_mm(int* dist_mm)
 				255, 255, 11, 12 };
 	if(status_raw < 24) status = status_rtn[status_raw];
 
-	// debug print the result
-	if(en_debug){
-		printf("status: %d  ", status);
-		switch(status){
-			case 0:
-				printf("Valid Range\n");
-				break;
-			case 1:
-				printf("Sigma Fail\n");
-				break;
-			case 2:
-				printf("Signal Fail\n");
-				break;
-			case 3:
-				printf("Min Range\n");
-				break;
-			case 4:
-				printf("Phase OOB\n");
-				break;
-			case 5:
-				printf("Hardware Failure\n");
-				break;
-			case 7:
-				printf("Wrapped Target\n");
-				break;
-			case 8:
-				printf("Processing Failure\n");
-				break;
-			case 14:
-				printf("Range Invalid\n");
-				break;
-
-			default: /**/
-				printf("Other Error\n");
-		}
-	}
-
 	// if not okay or low signal (which is fine) then flag as bad reading
-	if(status!=0 && status!=2){
-		*dist_mm = -1;
-		return 0;
-	}
+	// if(status!=0 && status!=2){
+	// 	*dist_mm = -1;
+	// 	return 0;
+	// }
 
-	// read actual range
-	uint16_t tmp;
-	if(vl53l1x_read_reg_word(VL53L1_RESULT__FINAL_CROSSTALK_CORRECTED_RANGE_MM_SD0, &tmp)){
-		*dist_mm = -2;
-		return -1;
-	}
-	*dist_mm = tmp;
+	// range
+	int offset = VL53L1_RESULT__FINAL_CROSSTALK_CORRECTED_RANGE_MM_SD0-base;
+	uint16_t dist_mm_raw = (all_data[offset]<<8) + all_data[offset+1];
+
 
 	// experiment applying gain factor (made it worse)
 	// int32_t range_mm = tmp;
@@ -211,23 +223,20 @@ int vl53l1x_get_distance_mm(int* dist_mm)
 	// *dist_mm = range_mm;
 
 	// read signal strength
-	vl53l1x_read_reg_word(VL53L1_RESULT__PEAK_SIGNAL_COUNT_RATE_MCPS_SD0, &tmp);
-	if(en_debug) printf("signal: %d", tmp);
+	offset = VL53L1_RESULT__PEAK_SIGNAL_COUNT_RATE_MCPS_SD0 - base;
+	uint16_t signal = (all_data[offset]<<8) + all_data[offset+1];
+
+	offset = VL53L1_RESULT__SIGMA_SD0 - base;
+	uint16_t sigma_mm = (all_data[offset]<<8) + all_data[offset+1];
+	sigma_mm /= 4; // register is in 14.2 fixed point so discard the fraction bits
 
 
-	vl53l1x_read_reg_word(VL53L1_RESULT__SIGMA_SD0, &tmp);
-	uint32_t sd_mm = tmp<<5;
-	//uint32_t sd_mm = tmp;
-	if(en_debug) printf("   SD: %d\n", sd_mm);
-
-
-#define VL53L1_FIXPOINT97TOFIXPOINT1616(Value) \
-	(uint16_t)((uint32_t)Value<<9)
-
-	uint16_t TempFix1616 = VL53L1_FIXPOINT97TOFIXPOINT1616(sd_mm);
-
-
-printf("   SD: %d\n", TempFix1616);
+	if(en_debug){
+		printf("mm:%5d ", dist_mm_raw);
+		printf("signal:%6d ", signal);
+		printf("SD:%5d ", sigma_mm);
+		_print_status(status);
+	}
 
 
 	return 0;

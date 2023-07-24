@@ -84,7 +84,6 @@ static rangefinder_config_t _get_default_config(void)
 	r.sensor_id = 0;
 	r.type = RANGEFINDER_TYPE_TOF_VL53L1X;
 	r.i2c_address = VL53L1X_TOF_DEFAULT_ADDR;
-	r.uncertainty_m = 0.02;
 	r.fov_deg = 27;
 	r.range_max_m = 3.0;
 	r.location_wrt_body[0] = 0.0;
@@ -120,7 +119,6 @@ void print_config(void)
 		printf("    type:                  %s\n", type_strings[r[i].type]);
 		printf("    i2c_address:           0x%X\n", r[i].i2c_address);
 
-		printf("    uncertainty_m:         %0.3f\n", (double)r[i].uncertainty_m);
 		printf("    fov_deg:               %0.3f\n", (double)r[i].fov_deg);
 		printf("    range_max_m:           %0.3f\n", (double)r[i].range_max_m);
 
@@ -193,7 +191,6 @@ int read_config_file()
 		json_fetch_enum_with_default(json_item, "type",	&r[i].type, type_strings, N_RANGEFINDER_TYPES, default_r.type);
 		json_fetch_int_with_default(json_item, "i2c_address", &r[i].i2c_address, default_r.i2c_address);
 
-		json_fetch_float_with_default(json_item, "uncertainty_m", &r[i].uncertainty_m, default_r.uncertainty_m);
 		json_fetch_float_with_default(json_item, "fov_deg", &r[i].fov_deg, default_r.fov_deg);
 		json_fetch_float_with_default(json_item, "range_max_m", &r[i].range_max_m, default_r.range_max_m);
 
@@ -275,7 +272,6 @@ static int _add_rangefinder_config_to_json(rangefinder_config_t* r, int n, int b
 		cJSON_AddStringToObject(json_item, "type", type_strings[r[i].type]);
 		cJSON_AddNumberToObject(json_item, "i2c_address", r[i].i2c_address);
 
-		cJSON_AddNumberToObject(json_item, "uncertainty_m", r[i].uncertainty_m);
 		cJSON_AddNumberToObject(json_item, "fov_deg", r[i].fov_deg);
 		cJSON_AddNumberToObject(json_item, "range_max_m", r[i].range_max_m);
 
