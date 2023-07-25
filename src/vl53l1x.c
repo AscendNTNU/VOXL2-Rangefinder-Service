@@ -41,6 +41,8 @@
 #include "config_file.h" // for bus global variable
 
 
+#define VL53L1X_LOWEST_ACCEPTABLE_SIGNAL 2
+
 static int en_debug = 0;
 
 void vl53l1x_set_en_debug(int en){
@@ -182,14 +184,17 @@ static void _print_status(uint8_t status)
 }
 
 
-int vl53l1x_get_distance_mm(int* dist_mm)
+int vl53l1x_get_distance_mm(int* dist_mm, int* sd)
 {
+	// set outputs to -1 so we can quit right away on error
+	*dist_mm = -1;
+	*sd = -1;
+
 	// one-shot read of all data
 	static const uint16_t base = VL53L1_RESULT__INTERRUPT_STATUS;
 	static const uint8_t n_bytes = 16; // up to the corrected range_mm register
 	uint8_t all_data[n_bytes];
 	if(vl53l1x_read_reg_bytes(VL53L1_RESULT__INTERRUPT_STATUS, all_data, n_bytes)){
-		*dist_mm = -2;
 		fprintf(stderr, "ERROR bulk reading status\n");
 		return -1;
 	}
@@ -203,12 +208,6 @@ int vl53l1x_get_distance_mm(int* dist_mm)
 				255, 255, 9, 13, 255, 255, 255, 255, 10, 6,
 				255, 255, 11, 12 };
 	if(status_raw < 24) status = status_rtn[status_raw];
-
-	// if not okay or low signal (which is fine) then flag as bad reading
-	// if(status!=0 && status!=2){
-	// 	*dist_mm = -1;
-	// 	return 0;
-	// }
 
 	// range
 	int offset = VL53L1_RESULT__FINAL_CROSSTALK_CORRECTED_RANGE_MM_SD0-base;
@@ -238,6 +237,15 @@ int vl53l1x_get_distance_mm(int* dist_mm)
 		_print_status(status);
 	}
 
+
+	// if not okay or low signal (which is fine) then flag as bad reading
+	if(status!=0 && status!=2) return 0;
+
+	// signal == 0 is definitely a bad reading. also drop borderline values
+	if(signal < VL53L1X_LOWEST_ACCEPTABLE_SIGNAL) return 0;
+
+	*dist_mm = dist_mm_raw;
+	*sd = sigma_mm;
 
 	return 0;
 }
@@ -269,7 +277,7 @@ int vl53l1x_check_whoami(int quiet)
 
 
 // argument is the index of this sensor in the enabled_sensors array
-int vl53l1x_init(float fov_deg)
+int vl53l1x_init(float fov_deg, int TimingBudgetInMs)
 {
 	if(vl53l1x_check_whoami(0)){
 		fprintf(stderr, "ERROR in %s, failed to verify whoami\n", __FUNCTION__);
@@ -290,10 +298,8 @@ int vl53l1x_init(float fov_deg)
 	vl53l1x_write_reg_word(SD_CONFIG__WOI_SD0, 0x0F0D);
 	vl53l1x_write_reg_word(SD_CONFIG__INITIAL_PHASE_SD0, 0x0E0E);
 
-	// set timing budget to 50ms
-	//int TimingBudgetInMs = 50;
 
-	switch (TimingBudgetInMs)
+	switch(TimingBudgetInMs)
 	{
 		case 20:
 			vl53l1x_write_reg_word(RANGE_CONFIG__TIMEOUT_MACROP_A_HI,0x001E);
@@ -388,11 +394,9 @@ int vl53l1x_wait_for_data(void)
 			fprintf(stderr, "failed to check data ready\n");
 			return -1;
 		}
-		if(isDataReady){
-			return 0;
-		}
-		//printf("data ready: %d i=%d\n", isDataReady, i);
-		usleep(1000);
+		if(en_debug) printf("data ready: %d i=%d\n", isDataReady, i);
+		if(isDataReady) return 0;
+		usleep(5000);
 	}
 
 	// timeout

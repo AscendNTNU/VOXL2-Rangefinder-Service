@@ -148,11 +148,6 @@ static int64_t _apps_time_monotonic_ns(void)
 
 static int _set_multiplexer(int mux_ch, uint8_t addr)
 {
-	// // first set slave address to the multiplexer
-	// const int i2c_bit_rate_hz	= 400000;
-	// const int i2c_timeout_us	= 1000;
-	//
-
 	if(en_debug) printf("setting mux to %d\n", mux_ch);
 
 	if(voxl_i2c_set_device_address(bus, mux_address)){
@@ -266,7 +261,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		if(vl53l1x_init(i)) _quit(-1);
+		if(vl53l1x_init(i, vl53l1x_timing_budget_ms)) _quit(-1);
 	}
 
 	if(en_debug) printf("finished initializing %d vl53l1x sensors\n", n_enabled_sensors);
@@ -308,12 +303,35 @@ int main(int argc, char* argv[])
 	// keep track of timing
 	int64_t last_time_ns = _apps_time_monotonic_ns();
 
-	// small array to keep the distances in
-	int dist_mm[MAX_SENSORS];
+	// start the standalone sensor ranging if it exists
+	// TODO this should be the secondary address later
+	if(has_nonmux_sensor){
+		if(n_mux_sensors>0){
+			_set_multiplexer(MUX_NONE, VL53L1X_TOF_DEFAULT_ADDR);
+		}
+		if(vl53l1x_start_ranging()){
+			fprintf(stderr, "failed to start ranging\n");
+			_quit(-1);
+		}
+	}
+	// start all the multiplexed sensors reading at the same time
+	if(n_mux_sensors>0){
+		_set_multiplexer(MUX_ALL, VL53L1X_TOF_DEFAULT_ADDR);
+		if(vl53l1x_start_ranging()){
+			fprintf(stderr, "failed to start ranging\n");
+			_quit(-1);
+		}
+	}
+
+
 
 	// keep sampling until signal handler tells us to stop
 	main_running = 1;
 	while(main_running){
+
+		// small array to keep the distances in
+		int dist_mm[n_enabled_sensors];
+		int sd_mm[n_enabled_sensors];
 
 		// nothing to do if there are no clients and not in debug mode
 		if(pipe_server_get_num_clients(PIPE_CH)==0 && !en_debug){
@@ -321,33 +339,12 @@ int main(int argc, char* argv[])
 			continue;
 		}
 
-		// start the standalone sensor ranging if it exists
-		// TODO this should be the secodnary address later
-		if(has_nonmux_sensor){
-			if(n_mux_sensors>0){
-				_set_multiplexer(MUX_NONE, VL53L1X_TOF_DEFAULT_ADDR);
-			}
-			if(vl53l1x_start_ranging()){
-				fprintf(stderr, "failed to start ranging\n");
-				main_running = 0;
-				break;
-			}
-		}
-		// start all the multiplexed sensors reading at the same time
-		if(n_mux_sensors>0){
-			_set_multiplexer(MUX_ALL, VL53L1X_TOF_DEFAULT_ADDR);
-			if(vl53l1x_start_ranging()){
-				fprintf(stderr, "failed to start ranging\n");
-				main_running = 0;
-				break;
-			}
-		}
 
 		// sleep a bit while they range, this should be less than the actual
 		// ranging time so we can poll them at the end of the ranging process
-		usleep(TimingBudgetInMs*1000);
+		usleep(vl53l1x_timing_budget_ms*900);
+
 		// now start reading the data back in
-		memset(dist_mm, 0, sizeof(dist_mm));
 		for(i=0;i<n_enabled_sensors;i++){
 
 			// switch i2c bus and multiplexer over to either a multiplexed or non-multiplexed sensor
@@ -359,16 +356,32 @@ int main(int argc, char* argv[])
 				_set_multiplexer(MUX_NONE, VL53L1X_TOF_DEFAULT_ADDR);
 			}
 
-			// wait for it to be done ranging
-			if(vl53l1x_wait_for_data()){
-				main_running = 0;
-				break;
-			}
+			dist_mm[i] = -1;
+			sd_mm[i]   = -1;
 
-			// read in the data and stop it ranging
-			vl53l1x_get_distance_mm(&dist_mm[i]);
-			vl53l1x_clear_interrupt();
-			vl53l1x_stop_ranging();
+			// wait for only the first sensor to be done ranging
+			if(i==0 && vl53l1x_wait_for_data()){
+				fprintf(stderr, "WARNING sensor %d failed to report new data\n", i);
+			}
+			// read in the data
+			vl53l1x_get_distance_mm(&dist_mm[i], &sd_mm[i]);
+		}
+
+
+		if(has_nonmux_sensor){
+			if(n_mux_sensors>0){
+				_set_multiplexer(MUX_NONE, VL53L1X_TOF_DEFAULT_ADDR);
+			}
+			if(vl53l1x_clear_interrupt()){
+				fprintf(stderr, "failed to clear interrupt\n");
+			}
+		}
+		// start all the multiplexed sensors reading at the same time
+		if(n_mux_sensors>0){
+			_set_multiplexer(MUX_ALL, VL53L1X_TOF_DEFAULT_ADDR);
+			if(vl53l1x_clear_interrupt()){
+				fprintf(stderr, "failed to clear interrupt\n");
+			}
 		}
 
 
@@ -399,6 +412,29 @@ int main(int argc, char* argv[])
 
 		last_time_ns = time_ns;
 	}
+
+
+
+
+
+	// start the standalone sensor ranging if it exists
+	// TODO this should be the secondary address later
+	if(has_nonmux_sensor){
+		if(n_mux_sensors>0){
+			_set_multiplexer(MUX_NONE, VL53L1X_TOF_DEFAULT_ADDR);
+		}
+		if(vl53l1x_stop_ranging()){
+			fprintf(stderr, "WARNING failed to stop ranging\n");
+		}
+	}
+	// start all the multiplexed sensors reading at the same time
+	if(n_mux_sensors>0){
+		_set_multiplexer(MUX_ALL, VL53L1X_TOF_DEFAULT_ADDR);
+		if(vl53l1x_stop_ranging()){
+			fprintf(stderr, "WARNING failed to stop ranging\n");
+		}
+	}
+
 
 	// close and cleanup
 	printf("exiting cleanly\n");

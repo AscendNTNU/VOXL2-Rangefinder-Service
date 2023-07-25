@@ -42,13 +42,14 @@
 
 #define CONFIG_FILE_PATH	"/etc/modalai/voxl-rangefinder-server.conf"
 #define SIN45 0.707106781186547524400844362105
-
+#define DEFUALT_VL53L1X_TIMING_BUDGET_MS 100
 
 
 // all sensors, including disabled ones
 // everything else is just concerned with the enabled_sensors array
 int n_total_sensors;
 rangefinder_config_t r[MAX_SENSORS];
+int vl53l1x_timing_budget_ms;
 
 
 // all enabled sensors and some easy-access data about them
@@ -71,6 +72,9 @@ int bus;
  *\n\
  * FOV for VL53l1X TOF rangefinder is a diagonal FOV in degrees and\n\
  * can be set between 15 and 27 degrees.\n\
+ *\n\
+ * vl53l1x_timing_budget_ms MUST be one of 20, 33, 50, 100, 200, 500\n\
+ * 100 is default\n\
  */\n"
 
 
@@ -110,7 +114,7 @@ void print_config(void)
 	printf("has_nonmux_sensor: %d\n", has_nonmux_sensor);
 	printf("n_mux_sensors:     %d\n", n_mux_sensors);
 	printf("n_enabled_sensors: %d\n", n_enabled_sensors);
-
+	printf("vl53l1x_timing_budget_ms: %d\n", vl53l1x_timing_budget_ms);
 
 	for(i=0; i<n_total_sensors; i++){
 		printf("#%d:\n",i);
@@ -181,6 +185,7 @@ int read_config_file()
 
 	// for now, the i2c bus is the only thing not in the array
 	json_fetch_int_with_default(parent, "i2c_bus", &bus, 1);
+	json_fetch_int_with_default(parent, "vl53l1x_timing_budget_ms", &vl53l1x_timing_budget_ms, DEFUALT_VL53L1X_TIMING_BUDGET_MS);
 
 	// copy out each item in the array
 	for(i=0; i<n_total_sensors; i++){
@@ -261,6 +266,7 @@ static int _add_rangefinder_config_to_json(rangefinder_config_t* r, int n, int b
 	const char* type_strings[] = RANGEFINDER_TYPE_STRINGS;
 
 	cJSON_AddNumberToObject(parent, "i2c_bus", bus);
+	cJSON_AddNumberToObject(parent, "vl53l1x_timing_budget_ms", DEFUALT_VL53L1X_TIMING_BUDGET_MS);
 	cJSON* json_array = json_fetch_array_and_add_if_missing(parent, "sensors", &m);
 
 	for(i=0;i<n;i++){

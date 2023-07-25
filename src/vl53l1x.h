@@ -52,7 +52,7 @@ int vl53l1x_clear_interrupt(void);
 
 int vl53l1x_check_for_data_ready(uint8_t *isDataReady);
 
-int vl53l1x_get_distance_mm(int* dist_mm);
+int vl53l1x_get_distance_mm(int* dist_mm, int* sd_mm);
 
 
 // Old from apq8096, not used anymore
@@ -60,7 +60,7 @@ int vl53l1x_set_address(uint8_t addr);
 
 
 int vl53l1x_check_whoami(int quiet);
-int vl53l1x_init(float fov_deg);
+int vl53l1x_init(float fov_deg, int TimingBudgetInMs);
 int vl53l1x_wait_for_data(void);
 
 #endif // end #define VL53L1X_H
