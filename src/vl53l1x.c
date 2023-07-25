@@ -426,6 +426,7 @@ int vl53l1x_swap_to_secondary_address(void)
 		vl53l1x_set_address(VL53L1X_TOF_SECONDARY_ADDR);
 		usleep(1000);
 		// now check if it worked
+		voxl_i2c_set_device_address(bus, VL53L1X_TOF_SECONDARY_ADDR);
 		if(vl53l1x_check_whoami(1)==0){
 			printf("successfully swapped to secondary\n");
 			return 0;
@@ -437,11 +438,7 @@ int vl53l1x_swap_to_secondary_address(void)
 	}
 	else{
 		printf("checking if secondary is set already\n");
-		if(voxl_i2c_set_device_address(bus, VL53L1X_TOF_SECONDARY_ADDR)){
-			fprintf(stderr, "failed to set i2c slave config on bus %d, address %d\n",
-												bus, VL53L1X_TOF_SECONDARY_ADDR);
-			return -1;
-		}
+		voxl_i2c_set_device_address(bus, VL53L1X_TOF_SECONDARY_ADDR);
 		if(vl53l1x_check_whoami(1)==0){
 			printf("device already on secondary\n");
 			return 0;

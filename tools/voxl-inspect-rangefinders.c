@@ -136,9 +136,9 @@ static void _helper_cb( __attribute__((unused)) int ch, char* data, int bytes, _
 
 			// print sample and latency
 			current_sample = d[i].sample_id;
-			double latency = (double)(_apps_time_monotonic_ns() - d[i].timestamp_ns)/1000000.0;
+			double latency_ns = _apps_time_monotonic_ns() - d[i].timestamp_ns;
 			printf("%8d |", current_sample);
-			printf("%10.1f    |", latency);
+			printf("%10.1f    |", latency_ns/1000000.0);
 		}
 
 		// now just print each distance

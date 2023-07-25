@@ -165,23 +165,34 @@ static void _quit(int ret)
 // TODO add support for multiple muxers in the future
 static int _set_multiplexer(int mux_ch, uint8_t addr)
 {
-	if(en_debug) printf("setting mux to %d\n", mux_ch);
+	if(n_mux_sensors>0){
 
-	if(voxl_i2c_set_device_address(bus, mux_address)){
-		fprintf(stderr, "failed to set i2c slave config on bus %d, address %d\n",
-				bus, mux_address);
-		return -1;
-	}
 
-	// set bitmask for mux channels to open
-	uint8_t bitmask;
-	if(mux_ch>7)		bitmask = 0xFF;			// all
-	else if(mux_ch<0)	bitmask = 0;			// none
-	else				bitmask = 1 << mux_ch;	// just one
+		if(voxl_i2c_set_device_address(bus, mux_address)){
+			fprintf(stderr, "failed to set i2c slave config on bus %d, address %d\n",
+					bus, mux_address);
+			return -1;
+		}
 
-	if(voxl_i2c_send_byte(bus, bitmask)){
-		fprintf(stderr, "failed to write to i2c multiplexer\n");
-		return -1;
+		// set bitmask for mux channels to open
+		uint8_t bitmask;
+		if(mux_ch>7){
+			bitmask = 0xFF;			// all
+			if(en_debug) printf("setting mux to all enabled\n");
+		}
+		else if(mux_ch<0){
+			bitmask = 0;			// none
+			if(en_debug) printf("setting mux to all off\n");
+		}
+		else{
+			bitmask = 1 << mux_ch;	// just one
+			if(en_debug) printf("setting mux to port %d only\n", mux_ch);
+		}
+
+		if(voxl_i2c_send_byte(bus, bitmask)){
+			fprintf(stderr, "failed to write to i2c multiplexer\n");
+			return -1;
+		}
 	}
 
 	// then put address back to the rangefinder
@@ -210,11 +221,11 @@ static int _init_all(void)
 	for(int i=0;i<n_enabled_sensors;i++){
 
 		// set up non-multiplexed sensor
-		if(!enabled_sensors[i].is_on_mux){
+		if(enabled_sensors[i].is_on_mux == 0){
 			printf("initializing non-multiplexed tof sensor id %d\n", \
 											enabled_sensors[i].sensor_id);
 			// only turn off mux if needed
-			if(n_mux_sensors>0 && _set_multiplexer(MUX_NONE, VL53L1X_TOF_SECONDARY_ADDR)){
+			if(_set_multiplexer(MUX_NONE, VL53L1X_TOF_SECONDARY_ADDR)){
 				fprintf(stderr, "failed to set slave\n");
 				return -1;
 			}
@@ -229,10 +240,13 @@ static int _init_all(void)
 		}
 
 		// finally init the single sensor after much multiplexer logic
-		if(vl53l1x_init(i, vl53l1x_timing_budget_ms)) return -1;
+		if(vl53l1x_init(i, vl53l1x_timing_budget_ms)){
+			fprintf(stderr, "Error initializing sensor %d\n", i);
+			return -1;
+		}
 	}
 
-	return -1;
+	return 0;
 }
 
 
@@ -240,9 +254,7 @@ static void _start_ranging_all(void)
 {
 	// start the standalone sensor ranging if it exists
 	if(has_nonmux_sensor){
-		if(n_mux_sensors>0){
-			_set_multiplexer(MUX_NONE, VL53L1X_TOF_SECONDARY_ADDR);
-		}
+		_set_multiplexer(MUX_NONE, VL53L1X_TOF_SECONDARY_ADDR);
 		if(vl53l1x_start_ranging()){
 			fprintf(stderr, "failed to start ranging\n");
 			_quit(-1);
@@ -263,9 +275,7 @@ static void _start_ranging_all(void)
 static void _clear_interrupt_all(void)
 {
 	if(has_nonmux_sensor){
-		if(n_mux_sensors>0){
-			_set_multiplexer(MUX_NONE, VL53L1X_TOF_SECONDARY_ADDR);
-		}
+		_set_multiplexer(MUX_NONE, VL53L1X_TOF_SECONDARY_ADDR);
 		if(vl53l1x_clear_interrupt()){
 			fprintf(stderr, "failed to clear interrupt\n");
 		}
@@ -287,9 +297,7 @@ static void _stop_ranging_all(void)
 	// start the standalone sensor ranging if it exists
 	// TODO this should be the secondary address later
 	if(has_nonmux_sensor){
-		if(n_mux_sensors>0){
-			_set_multiplexer(MUX_NONE, VL53L1X_TOF_SECONDARY_ADDR);
-		}
+		_set_multiplexer(MUX_NONE, VL53L1X_TOF_SECONDARY_ADDR);
 		if(vl53l1x_stop_ranging()){
 			fprintf(stderr, "WARNING failed to stop ranging\n");
 		}
@@ -412,12 +420,12 @@ int main(int argc, char* argv[])
 		for(i=0;i<n_enabled_sensors;i++){
 
 			// switch i2c bus and multiplexer over to either a multiplexed or non-multiplexed sensor
-			if(enabled_sensors[i].is_on_mux){
-				_set_multiplexer(	enabled_sensors[i].i2c_mux_port,\
-									enabled_sensors[i].i2c_mux_address);
+			if(enabled_sensors[i].is_on_mux == 0){
+				_set_multiplexer(MUX_NONE, VL53L1X_TOF_SECONDARY_ADDR);
 			}
-			else if(n_mux_sensors>0){
-				_set_multiplexer(MUX_NONE, VL53L1X_TOF_DEFAULT_ADDR);
+			else{
+				_set_multiplexer(	enabled_sensors[i].i2c_mux_port,\
+									VL53L1X_TOF_DEFAULT_ADDR);
 			}
 
 			// set output to error values incase there is an issue
@@ -426,10 +434,10 @@ int main(int argc, char* argv[])
 
 			// only for the first sensor, wait for it to be done ranging
 			if(i==0){
-				read_time_ns = _apps_time_monotonic_ns();
 				if(vl53l1x_wait_for_data()){
 					fprintf(stderr, "WARNING sensor %d failed to report new data\n", i);
 				}
+				read_time_ns = _apps_time_monotonic_ns();
 			}
 
 			// read in the data
@@ -441,7 +449,7 @@ int main(int argc, char* argv[])
 		_clear_interrupt_all();
 
 		// assume timestamp of data was from halfway through the reading process
-		int64_t timestamp_ns = read_time_ns - ((vl53l1x_timing_budget_ms*10e6) /2);
+		int64_t timestamp_ns = read_time_ns - (vl53l1x_timing_budget_ms*500000);
 
 		// keep track of number of samples read
 		static int sample_id = 0;

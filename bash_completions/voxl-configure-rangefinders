@@ -1,0 +1,11 @@
+
+_voxl-configure-rangefinders(){
+	local OPTS=('help enable disable factory_enable_1_on_m0141 factory_enable_4_on_m0141')
+	COMPREPLY=()
+	if [ "$COMP_CWORD" -eq 1 ]; then
+		COMPREPLY=( $(compgen -W '${OPTS}' -- ${COMP_WORDS[COMP_CWORD]}) )
+		return 0
+	fi
+}
+
+complete -F _voxl-configure-rangefinders voxl-configure-rangefinders
