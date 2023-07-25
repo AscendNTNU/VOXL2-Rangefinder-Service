@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2021 ModalAI Inc.
+ * Copyright 2023 ModalAI Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -44,10 +44,7 @@ typedef struct rangefinder_config_t{
 	int enabled;					///< a sensor is allowed to be listed and configured but disabled
 	int sensor_id;					///< ID of the rangefinder, must be unique
 	int type;						///< see voxl_rangefinder_interface.h
-	int i2c_address;				// for VL53l1X this is the desired address that will be set
 
-
-	float uncertainty_m;			///< encertainty in meters. Set negative if unknown
 	float fov_deg;					///< field of view of the sensor in degrees
 	float range_max_m;				///< Maximum range of the sensor in meters
 
@@ -73,7 +70,7 @@ extern int vl53l1x_timing_budget_ms;
 extern int n_enabled_sensors;
 extern rangefinder_config_t enabled_sensors[MAX_SENSORS];
 
-extern int has_nonmux_sensor;
+extern int has_nonmux_sensor; // should ideally be the first one!
 extern int n_mux_sensors;
 extern int mux_address;
 extern int bus;

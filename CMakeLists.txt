@@ -18,3 +18,4 @@ endif()
 
 # include each subdirectory, may have others in example/ or lib/ etc
 add_subdirectory (src)
+add_subdirectory (tools)

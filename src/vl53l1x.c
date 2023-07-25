@@ -113,6 +113,12 @@ static int vl53l1x_read_reg_word(uint16_t reg, uint16_t* data)
 }
 
 
+static int vl53l1x_set_address(uint8_t addr)
+{
+	return vl53l1x_write_reg_byte(VL53L1_I2C_SLAVE__DEVICE_ADDRESS, addr);
+}
+
+
 int vl53l1x_start_ranging(void)
 {
 	return vl53l1x_write_reg_byte(SYSTEM__MODE_START, 0x40); /* Enable VL53L1X */
@@ -250,10 +256,6 @@ int vl53l1x_get_distance_mm(int* dist_mm, int* sd)
 	return 0;
 }
 
-int vl53l1x_set_address(uint8_t addr)
-{
-	return vl53l1x_write_reg_byte(VL53L1_I2C_SLAVE__DEVICE_ADDRESS, addr); /* Enable VL53L1X */
-}
 
 int vl53l1x_check_whoami(int quiet)
 {
@@ -402,3 +404,53 @@ int vl53l1x_wait_for_data(void)
 	// timeout
 	return -1;
 }
+
+
+
+
+
+// this assumes mux is off and we can only see one sensor
+int vl53l1x_swap_to_secondary_address(void)
+{
+	// check whoami at default address first
+	if(voxl_i2c_set_device_address(bus, VL53L1X_TOF_DEFAULT_ADDR)){
+		fprintf(stderr, "failed to set i2c slave config on bus %d, address %d\n",
+											bus, VL53L1X_TOF_DEFAULT_ADDR);
+		return -1;
+	}
+
+
+	if(vl53l1x_check_whoami(1)==0){
+		// device is at default address, put it to secondary
+		printf("swapping nonmux sensor to secondary address\n");
+		vl53l1x_set_address(VL53L1X_TOF_SECONDARY_ADDR);
+		usleep(1000);
+		// now check if it worked
+		if(vl53l1x_check_whoami(1)==0){
+			printf("successfully swapped to secondary\n");
+			return 0;
+		}
+		else{
+			fprintf(stderr, "something went wrong trying to set secondary i2c address\n");
+			return -1;
+		}
+	}
+	else{
+		printf("checking if secondary is set already\n");
+		if(voxl_i2c_set_device_address(bus, VL53L1X_TOF_SECONDARY_ADDR)){
+			fprintf(stderr, "failed to set i2c slave config on bus %d, address %d\n",
+												bus, VL53L1X_TOF_SECONDARY_ADDR);
+			return -1;
+		}
+		if(vl53l1x_check_whoami(1)==0){
+			printf("device already on secondary\n");
+			return 0;
+		}
+		else{
+			fprintf(stderr, "ERROR in %s, can't talk to vl53l1X on either primary or secondary address\n", __FUNCTION__);
+			return -1;
+		}
+	}
+	return 0;
+}
+

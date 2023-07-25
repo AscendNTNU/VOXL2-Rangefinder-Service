@@ -59,8 +59,7 @@
 
 // types for the 'type' fields in rangefinder_data_t
 #define RANGEFINDER_TYPE_UNKNOWN		0
-#define RANGEFINDER_TYPE_TOF_VL53L1X	1 // supports 27, 20, and 15 degree FOV
-#define RANGEFINDER_TYPE_CHIRP_CH201	2
+#define RANGEFINDER_TYPE_TOF_VL53L1X	1
 
 /*
  * data structure containing detailed data about a rangefinder measurement.
@@ -76,7 +75,9 @@ typedef struct rangefinder_data_t{
 
 	int sensor_id;              ///< unique id identifying the sensor from which the sample originated.
 	float distance_m;           ///< distance in meters
-	float uncertainty_m;        ///< uncertainty in meters. Set negative if unknown
+	float uncertainty_m;        ///< uncertainty in meters. Set negative if unknown.
+                                ///< this is calculated as two standard deviations when
+                                ///< the sensor reports measurement sigma like vl53l1x
 
 	float fov_deg;              ///< field of view of the sensor in degrees
 	float location_wrt_body[3]; ///< location of the rangefinder with respect to body frame.

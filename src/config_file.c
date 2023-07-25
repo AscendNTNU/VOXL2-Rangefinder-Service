@@ -75,6 +75,8 @@ int bus;
  *\n\
  * vl53l1x_timing_budget_ms MUST be one of 20, 33, 50, 100, 200, 500\n\
  * 100 is default\n\
+ * vl53l1x FOV options are 15, 20, and 27 degrees\n\
+ * default is 27\n\
  */\n"
 
 
@@ -87,7 +89,6 @@ static rangefinder_config_t _get_default_config(void)
 	r.enabled = 1;
 	r.sensor_id = 0;
 	r.type = RANGEFINDER_TYPE_TOF_VL53L1X;
-	r.i2c_address = VL53L1X_TOF_DEFAULT_ADDR;
 	r.fov_deg = 27;
 	r.range_max_m = 3.0;
 	r.location_wrt_body[0] = 0.0;
@@ -121,7 +122,6 @@ void print_config(void)
 		printf("    enabled:               %d\n", r[i].enabled);
 		printf("    sensor_id:             %d\n", r[i].sensor_id);
 		printf("    type:                  %s\n", type_strings[r[i].type]);
-		printf("    i2c_address:           0x%X\n", r[i].i2c_address);
 
 		printf("    fov_deg:               %0.3f\n", (double)r[i].fov_deg);
 		printf("    range_max_m:           %0.3f\n", (double)r[i].range_max_m);
@@ -194,7 +194,6 @@ int read_config_file()
 		json_fetch_bool_with_default(json_item, "enabled", &r[i].enabled, default_r.enabled);
 		json_fetch_int_with_default(json_item, "sensor_id", &r[i].sensor_id, i);
 		json_fetch_enum_with_default(json_item, "type",	&r[i].type, type_strings, N_RANGEFINDER_TYPES, default_r.type);
-		json_fetch_int_with_default(json_item, "i2c_address", &r[i].i2c_address, default_r.i2c_address);
 
 		json_fetch_float_with_default(json_item, "fov_deg", &r[i].fov_deg, default_r.fov_deg);
 		json_fetch_float_with_default(json_item, "range_max_m", &r[i].range_max_m, default_r.range_max_m);
