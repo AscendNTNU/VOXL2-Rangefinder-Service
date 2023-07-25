@@ -275,7 +275,6 @@ static int _add_rangefinder_config_to_json(rangefinder_config_t* r, int n, int b
 		cJSON_AddBoolToObject(json_item, "enabled", r[i].enabled);
 		cJSON_AddNumberToObject(json_item, "sensor_id", r[i].sensor_id);
 		cJSON_AddStringToObject(json_item, "type", type_strings[r[i].type]);
-		cJSON_AddNumberToObject(json_item, "i2c_address", r[i].i2c_address);
 
 		cJSON_AddNumberToObject(json_item, "fov_deg", r[i].fov_deg);
 		cJSON_AddNumberToObject(json_item, "range_max_m", r[i].range_max_m);

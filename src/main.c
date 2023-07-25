@@ -370,7 +370,6 @@ int main(int argc, char* argv[])
 		data[i].sample_id				= 0;
 		data[i].sensor_id				= enabled_sensors[i].sensor_id;
 		data[i].distance_m				= 0.0f;
-		data[i].uncertainty_m			= enabled_sensors[i].uncertainty_m;
 		data[i].fov_deg					= enabled_sensors[i].fov_deg;
 		data[i].location_wrt_body[0]	= enabled_sensors[i].location_wrt_body[0];
 		data[i].location_wrt_body[1]	= enabled_sensors[i].location_wrt_body[1];
