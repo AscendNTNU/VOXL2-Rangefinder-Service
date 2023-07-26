@@ -168,6 +168,7 @@ static int _set_multiplexer(int mux_ch, uint8_t addr)
 	if(n_mux_sensors>0){
 
 
+
 		if(voxl_i2c_set_device_address(bus, mux_address)){
 			fprintf(stderr, "failed to set i2c slave config on bus %d, address %d\n",
 					bus, mux_address);
@@ -240,7 +241,7 @@ static int _init_all(void)
 		}
 
 		// finally init the single sensor after much multiplexer logic
-		if(vl53l1x_init(i, vl53l1x_timing_budget_ms)){
+		if(vl53l1x_init(enabled_sensors[i].fov_deg, vl53l1x_timing_budget_ms)){
 			fprintf(stderr, "Error initializing sensor %d\n", i);
 			return -1;
 		}
@@ -394,6 +395,7 @@ int main(int argc, char* argv[])
 	// now the sensors should have woken up. Start then ranging right before
 	// we start the read loop.
 	_start_ranging_all();
+	_clear_interrupt_all();
 
 
 	// keep sampling until signal handler tells us to stop
@@ -406,7 +408,7 @@ int main(int argc, char* argv[])
 		int64_t read_time_ns; // set after we read the interrupt
 
 		// nothing to do if there are no clients and not in debug mode
-		if(pipe_server_get_num_clients(PIPE_CH)==0 && !en_debug){
+		if(pipe_server_get_num_clients(PIPE_CH)<=0 && !en_debug){
 			usleep(500000);
 			continue;
 		}
@@ -415,6 +417,8 @@ int main(int argc, char* argv[])
 		// sleep a bit while they range, this should be less than the actual
 		// ranging time so we can poll them at the end of the ranging process
 		usleep(vl53l1x_timing_budget_ms*900);
+
+		if(en_debug) printf("---------------------------\n");
 
 		// now start reading the data back in
 		for(i=0;i<n_enabled_sensors;i++){
@@ -438,15 +442,19 @@ int main(int argc, char* argv[])
 					fprintf(stderr, "WARNING sensor %d failed to report new data\n", i);
 				}
 				read_time_ns = _apps_time_monotonic_ns();
+				// clear interrupt on first sensor so it's clear next time we start polling
+				vl53l1x_clear_interrupt();
 			}
 
 			// read in the data
 			vl53l1x_get_distance_mm(&dist_mm[i], &sd_mm[i]);
 		}
 
-		// now clear the interrupt on all sensors, probably only need to do the
-		// first one since we only wait for the data ready flag on the first one
-		_clear_interrupt_all();
+		// here is where we used to clear the interrupt on all sensors
+		// now we only do the first one since we only wait for the data ready
+		// flag on the first one. TODO maybe do this one in a while along with a
+		// stop and start ranging call to get them all back in sync
+		//_clear_interrupt_all();
 
 		// assume timestamp of data was from halfway through the reading process
 		int64_t timestamp_ns = read_time_ns - (vl53l1x_timing_budget_ms*500000);

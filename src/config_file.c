@@ -42,7 +42,7 @@
 
 #define CONFIG_FILE_PATH	"/etc/modalai/voxl-rangefinder-server.conf"
 #define SIN45 0.707106781186547524400844362105
-#define DEFUALT_VL53L1X_TIMING_BUDGET_MS 100
+#define DEFUALT_VL53L1X_TIMING_BUDGET_MS 50
 
 
 // all sensors, including disabled ones

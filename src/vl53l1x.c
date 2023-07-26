@@ -377,12 +377,12 @@ int vl53l1x_init(float fov_deg, int TimingBudgetInMs)
 
 
 	// stuff for automatic intermeasurement period, not used here
-	// uint16_t ClockPLL;
-	// uint16_t intermeasurement_time_ms = 30;
-	// vl53l1x_read_reg_word(VL53L1_RESULT__OSC_CALIBRATE_VAL, &ClockPLL);
-	// ClockPLL = ClockPLL & 0x3FF;
-	// vl53l1x_write_reg_int(VL53L1_SYSTEM__INTERMEASUREMENT_PERIOD,
-	// 			   (uint32_t)(ClockPLL * intermeasurement_time_ms * 1.075));
+	uint16_t ClockPLL;
+	uint16_t intermeasurement_time_ms = 30;
+	vl53l1x_read_reg_word(VL53L1_RESULT__OSC_CALIBRATE_VAL, &ClockPLL);
+	ClockPLL = ClockPLL & 0x3FF;
+	vl53l1x_write_reg_int(VL53L1_SYSTEM__INTERMEASUREMENT_PERIOD,
+				   (uint32_t)(ClockPLL * intermeasurement_time_ms * 1.075));
 
 	return 0;
 }
