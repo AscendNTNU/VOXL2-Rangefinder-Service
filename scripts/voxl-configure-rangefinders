@@ -48,8 +48,8 @@ print_usage () {
 	echo "before enabling the service."
 	echo ""
 	echo "voxl-configure-rangefinders disable"
-	echo "voxl-configure-rangefinders factory_enable_1_on_m0141"
-	echo "voxl-configure-rangefinders factory_enable_4_on_m0141"
+	echo "voxl-configure-rangefinders 1_on_m0141"
+	echo "voxl-configure-rangefinders 4_on_m0141"
 	echo "voxl-configure-rangefinders enable"
 	echo ""
 	echo "show this help message:"
@@ -105,11 +105,11 @@ case ${arg} in
 	"disable")
 		disable_service_and_exit
 		;;
-	"factory_enable_1_on_m0141")
+	"1_on_m0141")
 		voxl-rangefinder-server --config 1
 		enable_service_and_exit
 		;;
-	"factory_enable_4_on_m0141")
+	"4_on_m0141")
 		voxl-rangefinder-server --config 2
 		enable_service_and_exit
 		;;

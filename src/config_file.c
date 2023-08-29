@@ -325,36 +325,38 @@ int write_new_config_file_with_defaults(int arrangement)
 				r[i].i2c_mux_port = i;
 			}
 
-			// LEFT
+			// RIGHT
 			r[0].location_wrt_body[0]  =  0.0;
-			r[0].location_wrt_body[1]  =  0.0;
-			r[0].location_wrt_body[2]  =  0.0;
+			r[0].location_wrt_body[1]  =  27.0;
+			r[0].location_wrt_body[2]  =  -30.0;
 			r[0].direction_wrt_body[0] =  0.0;
-			r[0].direction_wrt_body[1] = -1.0;
+			r[0].direction_wrt_body[1] =  1.0;
 			r[0].direction_wrt_body[2] =  0.0;
 
-			// RIGHT
-			r[1].location_wrt_body[0]  =  0.0;
+			// BACK RIGHT
+			r[1].location_wrt_body[0]  =  -15.0;
 			r[1].location_wrt_body[1]  =  0.0;
-			r[1].location_wrt_body[2]  =  0.0;
-			r[1].direction_wrt_body[0] =  0.0;
-			r[1].direction_wrt_body[1] =  1.0;
+			r[1].location_wrt_body[2]  =  -45.0;
+			r[1].direction_wrt_body[0] = -0.974;
+			r[1].direction_wrt_body[1] =  0.225;
 			r[1].direction_wrt_body[2] =  0.0;
 
-			// BACK LEFT (rough guess, need to make accurate later)
-			r[2].location_wrt_body[0]  =  0.0;
+			// BACK LEFT
+			r[2].location_wrt_body[0]  =  -15.0;
 			r[2].location_wrt_body[1]  =  0.0;
-			r[2].location_wrt_body[2]  =  0.0;
+			r[2].location_wrt_body[2]  =  -45.0;
 			r[2].direction_wrt_body[0] = -0.974;
 			r[2].direction_wrt_body[1] = -0.225;
 			r[2].direction_wrt_body[2] =  0.0;
 
+			// LEFT
 			r[3].location_wrt_body[0]  =  0.0;
-			r[3].location_wrt_body[1]  =  0.0;
-			r[3].location_wrt_body[2]  =  0.0;
-			r[3].direction_wrt_body[0] = -0.974;
-			r[3].direction_wrt_body[1] =  0.225;
+			r[3].location_wrt_body[1]  =  -27.0;
+			r[3].location_wrt_body[2]  =  -30.0;
+			r[3].direction_wrt_body[0] =  0.0;
+			r[3].direction_wrt_body[1] = -1.0;
 			r[3].direction_wrt_body[2] =  0.0;
+
 
 			break;
 

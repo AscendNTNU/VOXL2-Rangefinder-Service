@@ -148,11 +148,9 @@ static int64_t _apps_time_monotonic_ns(void)
 
 static void _quit(int ret)
 {
-	printf("closing i2c bus\n");
 	if(voxl_i2c_close(bus)){
 		fprintf(stderr, "failed to close bus\n");
 	}
-	printf("closing pipes\n");
 	pipe_server_close_all();
 	remove_pid_file(PROCESS_NAME);
 	printf("exiting\n");
@@ -400,12 +398,15 @@ int main(int argc, char* argv[])
 
 	// keep sampling until signal handler tells us to stop
 	main_running = 1;
+	int err_ctr = 0;
+
 	while(main_running){
 
 		// small array to keep the distances in
 		int dist_mm[n_enabled_sensors];
 		int sd_mm[n_enabled_sensors];
 		int64_t read_time_ns; // set after we read the interrupt
+		int had_error = 0;
 
 		// nothing to do if there are no clients and not in debug mode
 		if(pipe_server_get_num_clients(PIPE_CH)<=0 && !en_debug){
@@ -425,10 +426,10 @@ int main(int argc, char* argv[])
 
 			// switch i2c bus and multiplexer over to either a multiplexed or non-multiplexed sensor
 			if(enabled_sensors[i].is_on_mux == 0){
-				_set_multiplexer(MUX_NONE, VL53L1X_TOF_SECONDARY_ADDR);
+				had_error |= _set_multiplexer(MUX_NONE, VL53L1X_TOF_SECONDARY_ADDR);
 			}
 			else{
-				_set_multiplexer(	enabled_sensors[i].i2c_mux_port,\
+				had_error |= _set_multiplexer(	enabled_sensors[i].i2c_mux_port,\
 									VL53L1X_TOF_DEFAULT_ADDR);
 			}
 
@@ -440,14 +441,15 @@ int main(int argc, char* argv[])
 			if(i==0){
 				if(vl53l1x_wait_for_data()){
 					fprintf(stderr, "WARNING sensor %d failed to report new data\n", i);
+					had_error |= -1;
 				}
 				read_time_ns = _apps_time_monotonic_ns();
 				// clear interrupt on first sensor so it's clear next time we start polling
-				vl53l1x_clear_interrupt();
+				had_error |= vl53l1x_clear_interrupt();
 			}
 
 			// read in the data
-			vl53l1x_get_distance_mm(&dist_mm[i], &sd_mm[i]);
+			had_error |= vl53l1x_get_distance_mm(&dist_mm[i], &sd_mm[i]);
 		}
 
 		// here is where we used to clear the interrupt on all sensors
@@ -479,6 +481,15 @@ int main(int argc, char* argv[])
 			double dt_ms = (timestamp_ns-last_time_ns)/1000000.0;
 			printf("dt = %6.1fms\n", dt_ms);
 			last_time_ns = timestamp_ns;
+		}
+
+		if(had_error){
+			err_ctr++;
+			if(err_ctr>3){
+				fprintf(stderr, "Encountered too many errors, quitting\n");
+				_stop_ranging_all();
+				_quit(-1);
+			}
 		}
 	} // end of main read loop
 

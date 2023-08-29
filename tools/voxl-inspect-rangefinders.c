@@ -44,7 +44,7 @@
 #include <modal_start_stop.h>
 #include <voxl_rangefinder_interface.h>
 
-#define CLIENT_NAME		"voxl-inspect-rangefinders"
+#define CLIENT_NAME		"inspect-rangefinders"
 
 
 static char pipe_path[MODAL_PIPE_MAX_PATH_LEN] = RANGEFINDER_PIPE_LOCATION;
@@ -76,7 +76,7 @@ typical usage\n\
 /# voxl-inspect-rangefinder\n\
 \n\
 This will print out rangefinder data from Modal Pipe Architecture.\n\
-By default this opens the edefault rangefinder pipe /run/mpa/rangefinders/\n\
+By default this opens the pipe \"rangefinders\"/\n\
 but this can be changed with the --pipe option.\n\
 \n\
 Range in meters will always print. Additional options are:\n\
@@ -93,7 +93,7 @@ Range in meters will always print. Additional options are:\n\
 static void _connect_cb(__attribute__((unused)) int ch, __attribute__((unused)) void* context)
 {
 	printf(FONT_BOLD);
-	printf("sample id|");
+	printf("   id  |");
 	printf("latency(ms)|");
 	printf("distances (m)");
 	printf("\n");
@@ -137,8 +137,8 @@ static void _helper_cb( __attribute__((unused)) int ch, char* data, int bytes, _
 			// print sample and latency
 			current_sample = d[i].sample_id;
 			double latency_ns = _apps_time_monotonic_ns() - d[i].timestamp_ns;
-			printf("%8d |", current_sample);
-			printf("%10.1f    |", latency_ns/1000000.0);
+			printf("%6d |", current_sample);
+			printf("%8.1f   |", latency_ns/1000000.0);
 		}
 
 		// now just print each distance
