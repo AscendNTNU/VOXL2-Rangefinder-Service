@@ -9,6 +9,11 @@ set(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -Wuninitialized \
 	-Wmissing-declarations -Werror=undef -Wno-unused-function ${CMAKE_C_FLAGS}")
 
 
+# tell the linker not to worry about missing symbols in libraries
+set(CMAKE_C_FLAGS   "-Wl,--unresolved-symbols=ignore-in-shared-libs ${CMAKE_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "-Wl,--unresolved-symbols=ignore-in-shared-libs ${CMAKE_CXX_FLAGS}")
+
+
 # for VOXL, install 64-bit libraries to lib64, 32-bit libs go in /usr/lib
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64")
 	set(LIB_INSTALL_DIR /usr/lib64)
