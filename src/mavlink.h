@@ -31,56 +31,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 
-#ifndef CONFIG_FILE_H
-#define CONFIG_FILE_H
+#ifndef MAVLINK_MODULE_H
+#define MAVLINK_MODULE_H
 
+#define MAVLINK_PIPE_NAME "mavlink_ap_heartbeat"
 
-#include "common.h"
+int mavlink_start(void);
+int mavlink_stop(void);
 
-
-// struct to contain all data from each single tag entry in config file
-typedef struct rangefinder_config_t{
-
-	int enabled;					///< a sensor is allowed to be listed and configured but disabled
-	int sensor_id;					///< ID of the rangefinder, must be unique
-	int type;						///< see voxl_rangefinder_interface.h
-
-	float fov_deg;					///< field of view of the sensor in degrees
-	float range_max_m;				///< Maximum range of the sensor in meters
-
-	float location_wrt_body[3];		///< location of the rangefinder with respect to body frame.
-	float direction_wrt_body[3];	///< direction vector of the rangefinder with respect to body frame
-
-	int is_on_mux;					// set non-zero to indicate this is connected through an i2c multiplexer
-	int i2c_mux_address;			// multiplexer address
-	int i2c_mux_port;				// 1-8
-
-} rangefinder_config_t;
+// publish a single reading as a DOWNWARD distance sensor
+int mavlink_publish(rangefinder_data_t d);
 
 
 
-// all sensors, including disabled ones
-// everything else is just concerned with the enabled_sensors array
-extern int n_total_sensors;
-extern rangefinder_config_t r[MAX_SENSORS];
-extern int vl53l1x_timing_budget_ms;
-
-
-// all enabled sensors and some easy-access data about them
-extern int n_enabled_sensors;
-extern rangefinder_config_t enabled_sensors[MAX_SENSORS];
-
-extern int has_nonmux_sensor; // should ideally be the first one!
-extern int n_mux_sensors;
-extern int mux_address;
-extern int bus;
-
-extern int id_for_mavlink;
-
-
-void print_config(void);
-int read_config_file(void);
-int write_new_config_file_with_defaults(int arrangement);
-
-
-#endif // end #define CONFIG_FILE_H
+#endif // end #define MAVLINK_MODULE_H

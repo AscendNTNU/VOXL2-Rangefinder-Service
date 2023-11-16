@@ -12,7 +12,8 @@ DEPS_QRB5165="
 libmodal-json
 libmodal-pipe
 libvoxl-cutils
-libqrb5165-io"
+libqrb5165-io
+voxl-mavlink"
 
 
 ## this list is just for tab-completion

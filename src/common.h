@@ -34,6 +34,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#define PROCESS_NAME	"voxl-rangefinder-server"
+
 #define MAX_SENSORS	32
 
 #define TCA9548A_MUX_DEFAULT_ADDR	0x70
@@ -49,6 +51,13 @@
 #define MUX_ALL		8
 #define MUX_NONE	-1
 
+
+
+// Server pipe channels
+#define PIPE_CH 0
+
+// client pipe channels
+#define MAV_PIPE_CH 0
 
 
 #endif // end #define COMMON_H

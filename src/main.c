@@ -45,13 +45,11 @@
 #include <modal_pipe_server.h>
 #include <voxl_rangefinder_interface.h>
 
+#include "mavlink.h"
 #include "common.h"
 #include "config_file.h"
 #include "vl53l1x.h"
 
-
-#define PROCESS_NAME	"voxl-rangefinder-server"
-#define PIPE_CH		0
 
 
 static int en_debug = 0;
@@ -389,6 +387,10 @@ int main(int argc, char* argv[])
 		data[i].reserved				= 0;
 	}
 
+	if(id_for_mavlink>=0){
+		mavlink_start();
+	}
+
 
 	// now the sensors should have woken up. Start then ranging right before
 	// we start the read loop.
@@ -474,6 +476,14 @@ int main(int argc, char* argv[])
 		}
 		pipe_server_write(PIPE_CH, data, sizeof(rangefinder_data_t)*n_enabled_sensors);
 
+
+		// TODO this index is not necessarily true if the downward sensor is in
+		// the middle of a list and a prior id is disabled. So best to kee the downward
+		// sensor with ID=0
+		if(id_for_mavlink>=0){
+			mavlink_publish(data[id_for_mavlink]);
+		}
+
 		// print distances in debug mode
 		if(en_timing){
 			static int64_t last_time_ns = 0;
@@ -496,6 +506,7 @@ int main(int argc, char* argv[])
 
 	// close and cleanup
 	_stop_ranging_all();
+	mavlink_stop();
 	printf("exiting cleanly\n");
 	_quit(0);
 	return 0;

@@ -60,7 +60,7 @@ int has_nonmux_sensor = 0;
 int n_mux_sensors = 0;
 int mux_address = 0;
 int bus;
-
+int id_for_mavlink = -1;
 
 
 #define CONFIG_FILE_HEADER "\
@@ -77,6 +77,10 @@ int bus;
  * 100 is default\n\
  * vl53l1x FOV options are 15, 20, and 27 degrees\n\
  * default is 27\n\
+ *\n\
+ * set id_for_mavlink to a valid id (0+) to publish that sensor reading to\n\
+ * mavlink as a DOWNWARD sensor for the autopilot to use\n\
+ * set to -1 to disable this feature.\n\
  */\n"
 
 
@@ -116,6 +120,7 @@ void print_config(void)
 	printf("n_mux_sensors:     %d\n", n_mux_sensors);
 	printf("n_enabled_sensors: %d\n", n_enabled_sensors);
 	printf("vl53l1x_timing_budget_ms: %d\n", vl53l1x_timing_budget_ms);
+	printf("id_for_mavlink:    %d\n", id_for_mavlink);
 
 	for(i=0; i<n_total_sensors; i++){
 		printf("#%d:\n",i);
@@ -186,6 +191,7 @@ int read_config_file()
 	// for now, the i2c bus is the only thing not in the array
 	json_fetch_int_with_default(parent, "i2c_bus", &bus, 1);
 	json_fetch_int_with_default(parent, "vl53l1x_timing_budget_ms", &vl53l1x_timing_budget_ms, DEFUALT_VL53L1X_TIMING_BUDGET_MS);
+	json_fetch_int_with_default(parent, "id_for_mavlink", &id_for_mavlink, id_for_mavlink);
 
 	// copy out each item in the array
 	for(i=0; i<n_total_sensors; i++){
@@ -259,13 +265,11 @@ int read_config_file()
 
 
 // used when constructing default sensor configurations
-static int _add_rangefinder_config_to_json(rangefinder_config_t* r, int n, int bus, cJSON* parent)
+static int _add_rangefinder_config_to_json(rangefinder_config_t* r, int n, cJSON* parent)
 {
 	int i,m;
 	const char* type_strings[] = RANGEFINDER_TYPE_STRINGS;
 
-	cJSON_AddNumberToObject(parent, "i2c_bus", bus);
-	cJSON_AddNumberToObject(parent, "vl53l1x_timing_budget_ms", DEFUALT_VL53L1X_TIMING_BUDGET_MS);
 	cJSON* json_array = json_fetch_array_and_add_if_missing(parent, "sensors", &m);
 
 	for(i=0;i<n;i++){
@@ -291,7 +295,8 @@ static int _add_rangefinder_config_to_json(rangefinder_config_t* r, int n, int b
 }
 
 #define RANGEFINDER_ARRANGEMENT_1_TOF_ON_M0141	1 // for testing without multiplexer
-#define RANGEFINDER_ARRANGEMENT_4_TOF_ON_M0141	2 // for Nokia Starling
+#define RANGEFINDER_ARRANGEMENT_1_DOWNWARD_TOF_ON_M0141	2 // for testing without multiplexer
+#define RANGEFINDER_ARRANGEMENT_4_TOF_ON_M0141	3 // for Nokia Starling
 
 int write_new_config_file_with_defaults(int arrangement)
 {
@@ -308,6 +313,18 @@ int write_new_config_file_with_defaults(int arrangement)
 			r[0].is_on_mux = 0;
 			bus = 1;
 			n_sensors = 1;
+			id_for_mavlink = -1; // disable mavlink
+			break;
+
+		case RANGEFINDER_ARRANGEMENT_1_DOWNWARD_TOF_ON_M0141:
+
+			printf("creating new config file for 1 downward TOF without multiplexer\n");
+			r[0] = _get_default_config();
+			r[0].is_on_mux = 0;
+			r[0].fov_deg = 15; // narrow for downward sensor
+			bus = 1;
+			n_sensors = 1;
+			id_for_mavlink = 0; // enable mavlink, assume this is a downward sensor
 			break;
 
 		case RANGEFINDER_ARRANGEMENT_4_TOF_ON_M0141:
@@ -366,7 +383,11 @@ int write_new_config_file_with_defaults(int arrangement)
 	}
 
 	cJSON* parent = cJSON_CreateObject();
-	_add_rangefinder_config_to_json(r,n_sensors,bus, parent);
+	cJSON_AddNumberToObject(parent, "i2c_bus", bus);
+	cJSON_AddNumberToObject(parent, "vl53l1x_timing_budget_ms", DEFUALT_VL53L1X_TIMING_BUDGET_MS);
+	cJSON_AddNumberToObject(parent, "id_for_mavlink", id_for_mavlink);
+
+	_add_rangefinder_config_to_json(r,n_sensors, parent);
 	json_write_to_file_with_header(CONFIG_FILE_PATH, parent, CONFIG_FILE_HEADER);
 	cJSON_Delete(parent);
 
