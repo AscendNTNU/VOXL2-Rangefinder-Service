@@ -132,10 +132,10 @@ void print_config(void)
 		printf("    range_max_m:           %0.3f\n", (double)r[i].range_max_m);
 
 		printf("    location_wrt_body:     ");
-		for(j=0;j<3;j++) printf("%0.1f ", (double)r[i].location_wrt_body[j]);
+		for(j=0;j<3;j++) printf("%6.3f ", (double)r[i].location_wrt_body[j]);
 		printf("\n");
 		printf("    direction_wrt_body:    ");
-		for(j=0;j<3;j++) printf("%0.1f ", (double)r[i].direction_wrt_body[j]);
+		for(j=0;j<3;j++) printf("%6.3f ", (double)r[i].direction_wrt_body[j]);
 		printf("\n");
 
 		printf("    is_on_mux:             %d\n", r[i].is_on_mux);
@@ -311,6 +311,15 @@ int write_new_config_file_with_defaults(int arrangement)
 			printf("creating new config file for 1 TOF without multiplexer\n");
 			r[0] = _get_default_config();
 			r[0].is_on_mux = 0;
+
+			// DOWN
+			r[0].location_wrt_body[0]  = -0.025;
+			r[0].location_wrt_body[1]  =  0.020;
+			r[0].location_wrt_body[2]  =  0.008;
+			r[0].direction_wrt_body[0] =  0.0;
+			r[0].direction_wrt_body[1] =  0.0;
+			r[0].direction_wrt_body[2] =  1.0; // Z points down
+
 			bus = 1;
 			n_sensors = 1;
 			id_for_mavlink = -1; // disable mavlink
@@ -322,6 +331,16 @@ int write_new_config_file_with_defaults(int arrangement)
 			r[0] = _get_default_config();
 			r[0].is_on_mux = 0;
 			r[0].fov_deg = 15; // narrow for downward sensor
+
+			// DOWN
+			r[0].location_wrt_body[0]  = -0.025;
+			r[0].location_wrt_body[1]  =  0.020;
+			r[0].location_wrt_body[2]  =  0.008;
+			r[0].direction_wrt_body[0] =  0.0;
+			r[0].direction_wrt_body[1] =  0.0;
+			r[0].direction_wrt_body[2] =  1.0; // Z points down
+
+
 			bus = 1;
 			n_sensors = 1;
 			id_for_mavlink = 0; // enable mavlink, assume this is a downward sensor
@@ -343,36 +362,36 @@ int write_new_config_file_with_defaults(int arrangement)
 			}
 
 			// RIGHT
-			r[0].location_wrt_body[0]  =  0.0;
-			r[0].location_wrt_body[1]  =  27.0;
-			r[0].location_wrt_body[2]  =  -30.0;
-			r[0].direction_wrt_body[0] =  0.0;
-			r[0].direction_wrt_body[1] =  1.0;
-			r[0].direction_wrt_body[2] =  0.0;
+			r[0].location_wrt_body[0]  =  0.000;
+			r[0].location_wrt_body[1]  =  0.027;
+			r[0].location_wrt_body[2]  = -0.030;
+			r[0].direction_wrt_body[0] =  0.000;
+			r[0].direction_wrt_body[1] =  1.000;
+			r[0].direction_wrt_body[2] =  0.000;
 
 			// BACK RIGHT
-			r[1].location_wrt_body[0]  =  -15.0;
-			r[1].location_wrt_body[1]  =  0.0;
-			r[1].location_wrt_body[2]  =  -45.0;
+			r[1].location_wrt_body[0]  = -0.015;
+			r[1].location_wrt_body[1]  =  0.000;
+			r[1].location_wrt_body[2]  = -0.045;
 			r[1].direction_wrt_body[0] = -0.974;
 			r[1].direction_wrt_body[1] =  0.225;
-			r[1].direction_wrt_body[2] =  0.0;
+			r[1].direction_wrt_body[2] =  0.000;
 
 			// BACK LEFT
-			r[2].location_wrt_body[0]  =  -15.0;
+			r[2].location_wrt_body[0]  = -0.015;
 			r[2].location_wrt_body[1]  =  0.0;
-			r[2].location_wrt_body[2]  =  -45.0;
+			r[2].location_wrt_body[2]  = -0.045;
 			r[2].direction_wrt_body[0] = -0.974;
 			r[2].direction_wrt_body[1] = -0.225;
-			r[2].direction_wrt_body[2] =  0.0;
+			r[2].direction_wrt_body[2] =  0.000;
 
 			// LEFT
-			r[3].location_wrt_body[0]  =  0.0;
-			r[3].location_wrt_body[1]  =  -27.0;
-			r[3].location_wrt_body[2]  =  -30.0;
-			r[3].direction_wrt_body[0] =  0.0;
-			r[3].direction_wrt_body[1] = -1.0;
-			r[3].direction_wrt_body[2] =  0.0;
+			r[3].location_wrt_body[0]  =  0.000;
+			r[3].location_wrt_body[1]  = -0.027;
+			r[3].location_wrt_body[2]  = -0.030;
+			r[3].direction_wrt_body[0] =  0.000;
+			r[3].direction_wrt_body[1] = -1.000;
+			r[3].direction_wrt_body[2] =  0.000;
 
 
 			break;

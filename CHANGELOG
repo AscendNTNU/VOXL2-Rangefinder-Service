@@ -1,3 +1,5 @@
+0.1.1
+    * update direction vector and location for downward sensor
 0.1.0
     * add publishing downward rangefinder to mavlink
 0.0.4

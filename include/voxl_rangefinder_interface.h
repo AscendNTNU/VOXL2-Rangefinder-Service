@@ -80,8 +80,8 @@ typedef struct rangefinder_data_t{
                                 ///< the sensor reports measurement sigma like vl53l1x
 
 	float fov_deg;              ///< field of view of the sensor in degrees
-	float location_wrt_body[3]; ///< location of the rangefinder with respect to body frame.
-	float direction_wrt_body[3];///< direction vector of the rangefinder with respect to body frame
+	float location_wrt_body[3]; ///< location of the rangefinder with respect to body frame in meters
+	float direction_wrt_body[3];///< direction vector of the rangefinder with respect to body frame, unitless vector
 
 	float range_max_m;          ///< Maximum range of the sensor in meters
 	int type;                   ///< Rangefinder type, e.g. RANGEFINDER_TPYE_VL53L1X
