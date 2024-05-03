@@ -51,6 +51,7 @@ print_usage () {
 	echo "voxl-configure-rangefinders 1_on_m0141"
 	echo "voxl-configure-rangefinders 1_downward_on_m0141"
 	echo "voxl-configure-rangefinders 4_on_m0141"
+	echo "voxl-configure-rangefinders 1_downward_on_m0173"
 	echo "voxl-configure-rangefinders enable"
 	echo ""
 	echo "1_downward_on_m0141 is for a downward sensor, this enables mavlink"
@@ -119,6 +120,10 @@ case ${arg} in
 		;;
 	"4_on_m0141")
 		voxl-rangefinder-server --config 3
+		enable_service_and_exit
+		;;
+	"1_downward_on_m0173")
+		voxl-rangefinder-server --config 4
 		enable_service_and_exit
 		;;
 	"enable")
