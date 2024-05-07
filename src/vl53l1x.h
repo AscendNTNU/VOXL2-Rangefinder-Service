@@ -54,6 +54,7 @@ int vl53l1x_check_for_data_ready(uint8_t *isDataReady);
 
 int vl53l1x_get_distance_mm(int* dist_mm, int* sd_mm);
 
+int vl53l1x_set_bus_to_default_slave_address(void);
 
 int vl53l1x_swap_to_secondary_address(void);
 
