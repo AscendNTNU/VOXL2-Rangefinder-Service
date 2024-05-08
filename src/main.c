@@ -510,6 +510,7 @@ int main(int argc, char* argv[])
 				_quit(-1);
 			}
 		}
+		else err_ctr=0;
 	} // end of main read loop
 
 
