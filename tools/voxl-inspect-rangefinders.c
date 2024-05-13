@@ -49,6 +49,8 @@
 
 static char pipe_path[MODAL_PIPE_MAX_PATH_LEN] = RANGEFINDER_PIPE_LOCATION;
 static int en_newline = 0;
+static bool test_mode = false;
+static int test_passed = 0;
 
 
 #define DISABLE_WRAP		"\033[?7l"	// disables line wrap, be sure to enable before exiting
@@ -83,6 +85,7 @@ Range in meters will always print. Additional options are:\n\
 -h, --help                  print this help message\n\
 -n, --newline               print each sample on a new line\n\
 -p, --pipe {pipe_name}      optionally specify the pipe name\n\
+-t, --test					test rangefinder feedback\n\
 \n");
 	return;
 }
@@ -157,6 +160,7 @@ static int _parse_opts(int argc, char* argv[])
 		{"help",				no_argument,		0, 'h'},
 		{"newline",				no_argument,		0, 'n'},
 		{"pipe",				required_argument,	0, 'p'},
+		{"test",				no_argument,		0, 't'},
 		{0, 0, 0, 0}
 	};
 
@@ -186,6 +190,10 @@ static int _parse_opts(int argc, char* argv[])
 				fprintf(stderr, "Invalid pipe name: %s\n", optarg);
 				return -1;
 			}
+			break;
+		
+		case 't':
+			test_mode = true;
 			break;
 
 		default:
@@ -231,11 +239,40 @@ int main(int argc, char* argv[])
 	}
 
 	// keep going until signal handler sets the running flag to 0
-	while(main_running) usleep(200000);
+	if (test_mode){
+		printf(FONT_BOLD);
+		printf("   id  |");
+		printf("latency(ms)|");
+		printf("distances (m)");
+		printf("\n");
+		printf(RESET_FONT);
+	}
+
+	while(main_running){
+		if(test_mode){
+			pipe_client_wait(0, PIPE_CLIENT_READ, 1000);
+			test_passed = 1;
+		}
+		else{
+			usleep(200000);
+		}
+	}
 
 	// all done, signal pipe read threads to stop
 	printf("\nclosing and exiting\n");
 	pipe_client_close_all();
+
+	if(test_mode){
+		if(test_passed){
+			printf("\n\nTEST PASSED\n");
+			return 0;
+		}
+		else{
+			printf("\n\nTEST FAILED\n");
+			return -1;
+		}
+	}
+
 	printf(ENABLE_WRAP);
 
 	return 0;
