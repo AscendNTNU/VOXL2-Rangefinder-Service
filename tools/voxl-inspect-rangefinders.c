@@ -39,12 +39,14 @@
 #include <stdlib.h> // for atoi()
 //#include <math.h>
 #include <time.h>
+#include <stdbool.h>
 
 #include <modal_pipe_client.h>
 #include <modal_start_stop.h>
 #include <voxl_rangefinder_interface.h>
 
 #define CLIENT_NAME		"inspect-rangefinders"
+#define PIPE_CLIENT_READ 1
 
 
 static char pipe_path[MODAL_PIPE_MAX_PATH_LEN] = RANGEFINDER_PIPE_LOCATION;
@@ -127,6 +129,13 @@ static void _helper_cb( __attribute__((unused)) int ch, char* data, int bytes, _
 
 	for(i=0;i<n_packets;i++){
 
+		if(test_mode && (double)d[i].distance_m > 0){
+			printf("%6.3f ", (double)d[i].distance_m);
+			main_running = 0;
+			test_passed = 1;
+			return;
+		}
+
 		// if a new sample_id is detected, start next line
 		if(current_sample != d[i].sample_id){
 
@@ -157,16 +166,17 @@ static int _parse_opts(int argc, char* argv[])
 {
 	static struct option long_options[] =
 	{
-		{"help",				no_argument,		0, 'h'},
-		{"newline",				no_argument,		0, 'n'},
-		{"pipe",				required_argument,	0, 'p'},
-		{"test",				no_argument,		0, 't'},
-		{0, 0, 0, 0}
+    	{"help",    no_argument,        0, 'h'},
+    	{"newline", no_argument,        0, 'n'},
+    	{"pipe",    required_argument,  0, 'p'},
+    	{"test",    no_argument,        0, 't'},
+    	{0, 0, 0, 0}
 	};
+
 
 	while(1){
 		int option_index = 0;
-		int c = getopt_long(argc, argv, "hnp:", long_options, &option_index);
+		int c = getopt_long(argc, argv, "hnp:t", long_options, &option_index);
 
 		if(c == -1) break; // Detect the end of the options.
 
@@ -239,24 +249,7 @@ int main(int argc, char* argv[])
 	}
 
 	// keep going until signal handler sets the running flag to 0
-	if (test_mode){
-		printf(FONT_BOLD);
-		printf("   id  |");
-		printf("latency(ms)|");
-		printf("distances (m)");
-		printf("\n");
-		printf(RESET_FONT);
-	}
-
-	while(main_running){
-		if(test_mode){
-			pipe_client_wait(0, PIPE_CLIENT_READ, 1000);
-			test_passed = 1;
-		}
-		else{
-			usleep(200000);
-		}
-	}
+	while(main_running) usleep(200000);
 
 	// all done, signal pipe read threads to stop
 	printf("\nclosing and exiting\n");
