@@ -1,3 +1,6 @@
+0.1.3
+    * add test option to voxl-inspect-rangefinders
+    * mods for M0157
 0.1.2
     * add config option for rangefinders on M0173
 0.1.1
