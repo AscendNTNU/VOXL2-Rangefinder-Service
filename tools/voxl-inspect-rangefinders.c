@@ -129,7 +129,7 @@ static void _helper_cb( __attribute__((unused)) int ch, char* data, int bytes, _
 
 	for(i=0;i<n_packets;i++){
 
-		if(test_mode && (double)d[i].distance_m > 0){
+		if(test_mode && (double)d[i].distance_m >= 0){
 			printf("%6.3f ", (double)d[i].distance_m);
 			main_running = 0;
 			test_passed = 1;
