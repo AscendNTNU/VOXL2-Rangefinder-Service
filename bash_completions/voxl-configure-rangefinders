@@ -1,6 +1,6 @@
 
 _voxl-configure-rangefinders(){
-	local OPTS=('help enable disable 1_on_m0141 1_downward_on_m0141 4_on_m0141 1_downward_on_m0173')
+	local OPTS=('help enable disable 1_on_m0141 1_downward_on_m0141 4_on_m0141 1_downward_on_m0173 1_downward_on_m0188')
 	COMPREPLY=()
 	if [ "$COMP_CWORD" -eq 1 ]; then
 		COMPREPLY=( $(compgen -W '${OPTS}' -- ${COMP_WORDS[COMP_CWORD]}) )

@@ -298,6 +298,7 @@ static int _add_rangefinder_config_to_json(rangefinder_config_t* r, int n, cJSON
 #define RANGEFINDER_ARRANGEMENT_1_DOWNWARD_TOF_ON_M0141	2 // for D0011 PX4 Edition Starling
 #define RANGEFINDER_ARRANGEMENT_4_TOF_ON_M0141	3 // for D0010
 #define RANGEFINDER_ARRANGEMENT_1_DOWNWARD_TOF_ON_M0173	4 // For D0012 and D0014 Starling 2 max and Starling 2
+#define RANGEFINDER_ARRANGEMENT_1_DOWNWARD_TOF_ON_M0188	5 // For D0013 Stinger
 
 int write_new_config_file_with_defaults(int arrangement)
 {
@@ -413,6 +414,27 @@ int write_new_config_file_with_defaults(int arrangement)
 
 
 			bus = 4;
+			n_sensors = 1;
+			id_for_mavlink = 0; // enable mavlink, assume this is a downward sensor
+			break;
+
+		case RANGEFINDER_ARRANGEMENT_1_DOWNWARD_TOF_ON_M0188:
+
+			printf("creating new config file for 1 downward TOF without multiplexer\n");
+			r[0] = _get_default_config();
+			r[0].is_on_mux = 0;
+			r[0].fov_deg = 15; // narrow for downward sensor
+
+			// DOWN
+			r[0].location_wrt_body[0]  =  0.0;
+			r[0].location_wrt_body[1]  =  0.0;
+			r[0].location_wrt_body[2]  =  0.0;
+			r[0].direction_wrt_body[0] =  0.0;
+			r[0].direction_wrt_body[1] =  0.0;
+			r[0].direction_wrt_body[2] =  1.0; // Z points down
+
+
+			bus = 0;
 			n_sensors = 1;
 			id_for_mavlink = 0; // enable mavlink, assume this is a downward sensor
 			break;
