@@ -1,5 +1,7 @@
 0.1.5
     * add config options for voxl2 mini & m0188
+    * better detection of false readings
+    * clip output at configurable max distance
 0.1.4
     * -t small fix
 0.1.3

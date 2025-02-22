@@ -482,6 +482,9 @@ int main(int argc, char* argv[])
 			data[i].sample_id				= sample_id;
 			data[i].distance_m				= (float)(dist_mm[i])/1000.0f;
 			data[i].uncertainty_m			= (float)(sd_mm[i]*2)/1000.0f;
+
+			// clip our output at max range since we don't trust the sensor beyond that
+			if(data[i].distance_m>data[i].range_max_m) data[i].distance_m = -1;
 		}
 		pipe_server_write(PIPE_CH, data, sizeof(rangefinder_data_t)*n_enabled_sensors);
 

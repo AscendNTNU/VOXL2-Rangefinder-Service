@@ -41,7 +41,7 @@
 #include "config_file.h" // for bus global variable
 
 
-#define VL53L1X_LOWEST_ACCEPTABLE_SIGNAL 2
+#define VL53L1X_LOWEST_ACCEPTABLE_SIGNAL 5
 
 static int en_debug = 0;
 
@@ -290,7 +290,7 @@ static void _print_status(uint8_t status)
 int vl53l1x_get_distance_mm(int* dist_mm, int* sd)
 {
 	// set outputs to -1 so we can quit right away on error
-	*dist_mm = -1;
+	*dist_mm = -1000;
 	*sd = -1;
 
 	// one-shot read of all data
@@ -341,8 +341,11 @@ int vl53l1x_get_distance_mm(int* dist_mm, int* sd)
 	}
 
 
-	// if not okay or low signal (which is fine) then flag as bad reading
+	// allow "good" and "low signal" readings through, we check signal strength ourselves
 	if(status!=0 && status!=2) return 0;
+
+	// Sensor reads uint16_max sometimes on bad readings, discard these too
+	if(dist_mm_raw > 8000) return 0;
 
 	// signal == 0 is definitely a bad reading. also drop borderline values
 	if(signal < VL53L1X_LOWEST_ACCEPTABLE_SIGNAL) return 0;

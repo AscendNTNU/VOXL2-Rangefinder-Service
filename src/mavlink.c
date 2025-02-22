@@ -127,7 +127,7 @@ int mavlink_publish(rangefinder_data_t d)
 	uint8_t signal_quality = 100;
 
 	if(d.distance_m<0){
-		signal_quality = 1; // indicate invalid signal
+		signal_quality = -1; // indicate invalid signal
 	}
 
 	mavlink_message_t msg;
