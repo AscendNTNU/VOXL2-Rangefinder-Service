@@ -40,6 +40,7 @@
 
 #define TCA9548A_MUX_DEFAULT_ADDR	0x70
 
+#define M0195_MUX_DEFAULT_ADDR  0x73
 
 #define MUX_ALL		8
 #define MUX_NONE	-1

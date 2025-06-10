@@ -131,6 +131,10 @@ case ${arg} in
 		voxl-rangefinder-server --config 5
 		enable_service_and_exit
 		;;
+	"1_downward_on_m0195")
+		voxl-rangefinder-server --config 6
+		enable_service_and_exit
+		;;
 	"enable")
 		enable_service_and_exit
 		;;
