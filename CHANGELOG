@@ -1,3 +1,5 @@
+0.1.6
+    * add m0195 config
 0.1.5
     * add config options for voxl2 mini & m0188
     * better detection of false readings
