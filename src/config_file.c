@@ -300,6 +300,7 @@ static int _add_rangefinder_config_to_json(rangefinder_config_t* r, int n, cJSON
 #define RANGEFINDER_ARRANGEMENT_1_DOWNWARD_TOF_ON_M0173	4 // For D0012 and D0014 Starling 2 max and Starling 2
 #define RANGEFINDER_ARRANGEMENT_1_DOWNWARD_TOF_ON_M0188	5 // For D0013 Stinger
 #define RANGEFINDER_ARRANGEMENT_1_DOWNWARD_TOF_ON_M0195 6 // 
+#define RANGEFINDER_ARRANGEMENT_SF20C_ON_M0141 7 // Perception 2026 SF20C sensor on J5 port on M0141 USB breakout on VOXL2
 
 int write_new_config_file_with_defaults(int arrangement)
 {
@@ -463,7 +464,28 @@ int write_new_config_file_with_defaults(int arrangement)
 			n_sensors = 1;
 			id_for_mavlink = 0; // enable mavlink, assume this is a downward sensor
 			break;
+		
+		case RANGEFINDER_ARRANGEMENT_SF20C_ON_M0141:
 
+			printf("creating new config file for SF20C without multiplexer\n");
+			r[0] = _get_default_config();
+			r[0].is_on_mux = 0;
+
+			// DOWN
+			r[0].location_wrt_body[0]  = -0.025;
+			r[0].location_wrt_body[1]  =  0.020;
+			r[0].location_wrt_body[2]  =  0.008;
+			r[0].direction_wrt_body[0] =  0.0;
+			r[0].direction_wrt_body[1] =  0.0;
+			r[0].direction_wrt_body[2] =  1.0; // Z points down
+
+			r[0].fov_deg = 0.001; // 1D lidar
+			r[0].range_max_m = 100; // SF20C can see up to 100 meters
+			
+			bus = 1; // Does this mean /dev/i2c-1 ? - Peter L
+			n_sensors = 1;
+			id_for_mavlink = 0; // enable mavlink, assume this is a downward sensor
+			break;
 		default:
 			fprintf(stderr, "ERROR in %s, invalid arrangement\n", __FUNCTION__);
 			return -1;
@@ -471,7 +493,7 @@ int write_new_config_file_with_defaults(int arrangement)
 
 	cJSON* parent = cJSON_CreateObject();
 	cJSON_AddNumberToObject(parent, "i2c_bus", bus);
-	cJSON_AddNumberToObject(parent, "vl53l1x_timing_budget_ms", DEFUALT_VL53L1X_TIMING_BUDGET_MS);
+	cJSON_AddNumberToObject(parent, "vl53l1x_timing_budget_ms", DEFUALT_VL53L1X_TIMING_BUDGET_MS); // vl53l1x is stupid here, we should change to more general later to avoid confusion -Peter L
 	cJSON_AddNumberToObject(parent, "id_for_mavlink", id_for_mavlink);
 
 	_add_rangefinder_config_to_json(r,n_sensors, parent);

@@ -107,7 +107,7 @@ int mavlink_stop(void)
 }
 
 // publish a single reading as a DOWNWARD distance sensor
-int mavlink_publish(rangefinder_data_t d)
+int mavlink_publish(rangefinder_data_t d) // This looks good -Peter L
 {
 	if(!pipe_client_is_connected(MAV_PIPE_CH)){
 		return 0;

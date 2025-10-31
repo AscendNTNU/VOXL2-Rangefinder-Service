@@ -54,12 +54,13 @@
 #define RANGEFINDER_MAGIC_NUMBER (0x564F584C)
 
 
-#define RANGEFINDER_TYPE_STRINGS {"unknown", "TOF_VL53L1X"}
-#define N_RANGEFINDER_TYPES	2
+#define RANGEFINDER_TYPE_STRINGS {"unknown", "TOF_VL53L1X", "SF20C"}
+#define N_RANGEFINDER_TYPES	3
 
 // types for the 'type' fields in rangefinder_data_t
 #define RANGEFINDER_TYPE_UNKNOWN		0
 #define RANGEFINDER_TYPE_TOF_VL53L1X	1
+#define RANGEFINDER_TYPE_TOF_SF20C		2
 
 /*
  * data structure containing detailed data about a rangefinder measurement.

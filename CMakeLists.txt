@@ -16,9 +16,9 @@ set(CMAKE_CXX_FLAGS "-Wl,--unresolved-symbols=ignore-in-shared-libs ${CMAKE_CXX_
 
 # for VOXL, install 64-bit libraries to lib64, 32-bit libs go in /usr/lib
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64")
-	set(LIB_INSTALL_DIR /usr/lib64)
+	set(LIB_INSTALL_DIR "${CMAKE_SOURCE_DIR}/usr/lib64")
 else()
-	set(LIB_INSTALL_DIR /usr/lib)
+	set(LIB_INSTALL_DIR "${CMAKE_SOURCE_DIR}/usr/lib")
 endif()
 
 # include each subdirectory, may have others in example/ or lib/ etc
