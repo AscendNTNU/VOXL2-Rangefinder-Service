@@ -63,8 +63,3 @@ Replace `<voxl-ip>` with your device’s IP address.
 ## ✅ Result
 
 The package should now be installed and running on your VOXL.
-You can verify using:
-
-```bash
-adb shell systemctl status voxl-rangefinder-service
-```
