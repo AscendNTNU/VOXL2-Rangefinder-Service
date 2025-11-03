@@ -43,6 +43,7 @@
 #define CONFIG_FILE_PATH	"/etc/modalai/voxl-rangefinder-server.conf"
 #define SIN45 0.707106781186547524400844362105
 #define DEFUALT_VL53L1X_TIMING_BUDGET_MS 50
+#define DEFUALT_SF20C_TIMING_BUDGET_MS 50
 
 
 // all sensors, including disabled ones
@@ -50,7 +51,7 @@
 int n_total_sensors;
 rangefinder_config_t r[MAX_SENSORS];
 int vl53l1x_timing_budget_ms;
-
+int sf20c_timing_budget_ms;
 
 // all enabled sensors and some easy-access data about them
 int n_enabled_sensors;
@@ -92,17 +93,17 @@ static rangefinder_config_t _get_default_config(void)
 
 	r.enabled = 1;
 	r.sensor_id = 0;
-	r.type = RANGEFINDER_TYPE_TOF_VL53L1X;
-	r.fov_deg = 27;
-	r.range_max_m = 3.0;
+	r.type = RANGEFINDER_TYPE_TOF_SF20C;
+	r.fov_deg = 0.0001;
+	r.range_max_m = 100.0;
 	r.location_wrt_body[0] = 0.0;
 	r.location_wrt_body[1] = 0.0;
 	r.location_wrt_body[2] = 0.0;
 	r.direction_wrt_body[0] = 0.0;
 	r.direction_wrt_body[1] = 0.0;
 	r.direction_wrt_body[2] = 0.0;
-	r.is_on_mux = 1;
-	r.i2c_mux_address = TCA9548A_MUX_DEFAULT_ADDR;
+	r.is_on_mux = 0;
+	r.i2c_mux_address = 0x00;
 	r.i2c_mux_port = 0;
 
 	return r;
@@ -120,6 +121,7 @@ void print_config(void)
 	printf("n_mux_sensors:     %d\n", n_mux_sensors);
 	printf("n_enabled_sensors: %d\n", n_enabled_sensors);
 	printf("vl53l1x_timing_budget_ms: %d\n", vl53l1x_timing_budget_ms);
+	printf("sf20c_timing_budget_ms: %d\n", sf20c_timing_budget_ms);
 	printf("id_for_mavlink:    %d\n", id_for_mavlink);
 
 	for(i=0; i<n_total_sensors; i++){
@@ -191,6 +193,7 @@ int read_config_file()
 	// for now, the i2c bus is the only thing not in the array
 	json_fetch_int_with_default(parent, "i2c_bus", &bus, 1);
 	json_fetch_int_with_default(parent, "vl53l1x_timing_budget_ms", &vl53l1x_timing_budget_ms, DEFUALT_VL53L1X_TIMING_BUDGET_MS);
+	json_fetch_int_with_default(parent, "sf20c_timing_budget_ms", &sf20c_timing_budget_ms, DEFUALT_SF20C_TIMING_BUDGET_MS);
 	json_fetch_int_with_default(parent, "id_for_mavlink", &id_for_mavlink, id_for_mavlink);
 
 	// copy out each item in the array
@@ -361,7 +364,7 @@ int write_new_config_file_with_defaults(int arrangement)
 			for(i=0;i<n_sensors;i++){
 				r[i] = _get_default_config();
 				r[i].sensor_id = i;
-				r[i].i2c_mux_address = TCA9548A_MUX_DEFAULT_ADDR;
+				r[i].i2c_mux_address = 0x00;
 				r[i].i2c_mux_port = i;
 			}
 
@@ -494,6 +497,7 @@ int write_new_config_file_with_defaults(int arrangement)
 	cJSON* parent = cJSON_CreateObject();
 	cJSON_AddNumberToObject(parent, "i2c_bus", bus);
 	cJSON_AddNumberToObject(parent, "vl53l1x_timing_budget_ms", DEFUALT_VL53L1X_TIMING_BUDGET_MS); // vl53l1x is stupid here, we should change to more general later to avoid confusion -Peter L
+	cJSON_AddNumberToObject(parent, "sf20c_timing_budget_ms", DEFUALT_SF20C_TIMING_BUDGET_MS); 
 	cJSON_AddNumberToObject(parent, "id_for_mavlink", id_for_mavlink);
 
 	_add_rangefinder_config_to_json(r,n_sensors, parent);

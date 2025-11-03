@@ -53,10 +53,12 @@ print_usage () {
 	echo "voxl-configure-rangefinders 4_on_m0141"
 	echo "voxl-configure-rangefinders 1_downward_on_m0173"
 	echo "voxl-configure-rangefinders 1_downward_on_m0188"
+	echo ""
 	echo "----------------------------------------------"
 	echo "Perception 2026 will only be using this one:"
 	echo "voxl-configure-rangefinders SF20C_on_m0141"
 	echo "----------------------------------------------"
+	echo ""
 	echo "voxl-configure-rangefinders enable"
 	echo ""
 	echo "1_downward_on_m0141 is for a downward sensor, this enables mavlink"
@@ -139,7 +141,7 @@ case ${arg} in
 		voxl-rangefinder-server --config 6
 		enable_service_and_exit
 		;;
-	"SF20C_on_m0141")
+	"sf20c_on_m0141")
 		voxl-rangefinder-server --config 7
 		enable_service_and_exit
 		;;

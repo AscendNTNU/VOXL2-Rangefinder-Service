@@ -64,7 +64,7 @@ typedef struct rangefinder_config_t{
 extern int n_total_sensors;
 extern rangefinder_config_t r[MAX_SENSORS];
 extern int vl53l1x_timing_budget_ms;
-
+extern int sf20c_timing_budget_ms;
 
 // all enabled sensors and some easy-access data about them
 extern int n_enabled_sensors;

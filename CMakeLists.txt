@@ -13,6 +13,9 @@ set(CMAKE_C_FLAGS "-std=gnu99 -Wall -Wextra -Wuninitialized \
 set(CMAKE_C_FLAGS   "-Wl,--unresolved-symbols=ignore-in-shared-libs ${CMAKE_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "-Wl,--unresolved-symbols=ignore-in-shared-libs ${CMAKE_CXX_FLAGS}")
 
+set(PROJ_SYS_INCLUDE "${CMAKE_SOURCE_DIR}/usr/include" CACHE PATH "Vendored VOXL include root")
+set(MODAL_LIB_DIR    "${CMAKE_SOURCE_DIR}/usr/lib"     CACHE PATH "Vendored VOXL lib root")
+include_directories(${PROJ_SYS_INCLUDE} ${CMAKE_SOURCE_DIR}/include)
 
 # for VOXL, install 64-bit libraries to lib64, 32-bit libs go in /usr/lib
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64")

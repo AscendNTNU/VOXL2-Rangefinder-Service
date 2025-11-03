@@ -1,0 +1,1 @@
+Files inside this folder are only for looking up useful functions and protocols.
